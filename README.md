@@ -98,6 +98,21 @@ Balances persist in the browser (localStorage). **Reset demo data** puts them ba
 
 > Teaching simulation. Hogan is a trademark of DXC Technology; this project is independent and not affiliated with DXC. Program names, transaction codes, record layouts, partners, people and the bank are made up. Nothing connects to a real core, network or rail.
 
+## Part 2: Tokenized Deposit Flow + Treasury Center (`hogan-console/tdn-flow/`)
+
+An animated system diagram that follows one tokenized deposit request end to end:
+
+client → **Azure APIM** (mTLS, validate-jwt, rate limit, JSON schema) → **payments orchestrator** (saga) → **AML / BSA / fraud** in parallel → **z/OS Connect** → **Hogan CICS TDNXF300** → **DDA · BDA · CDA** → **tokenized deposit network** (MQ → tdUSD contract) → 201 to the client → **Oracle Fusion Cloud GL** (FBDI journal import) → **settlement** (book transfer, on-ledger, or Fedwire pacs.009 for interbank) → **three-way reconciliation** (network = Hogan BDA = GL 210500) → **Treasury Center**.
+
+- Actions: mint, burn, and transfer (on-us, or interbank to Participant B).
+- Scenarios: clean, AML alert, sanctions potential match, fraud review, KYC refresh, or GL import delayed (creates a recon break).
+- Every step shows its payload (HTTP, APIM policy, canonical event, screening calls, z/OS Connect mapping, COBOL, MQ/network call, FBDI + REST, pacs.009, recon) and can be stepped one at a time.
+- The Treasury Center shows reserve vs token supply, intraday liquidity, settlement + recon status, Oracle GL journals, the compliance queue (Release / Reject), and recon breaks (Run journal import).
+
+No real bank is represented. Participants, customers, wallets and amounts are made up.
+
+**Test:** `node hogan-console/tests/tdn-flow.mjs`
+
 **Smoke test:** `npm i -D playwright && npx playwright install chromium && node hogan-console/tests/smoke.mjs`
 
 **Deploy:** `netlify.toml` publishes `hogan-console/` as the site root.
