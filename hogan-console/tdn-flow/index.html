@@ -312,16 +312,16 @@ main{flex:1;padding:1rem 1.75rem 1.75rem;display:flex;flex-direction:column;gap:
 
   <section id="treasury" aria-label="Treasury Center">
     <div class="tc-head">
-      <div><h2>Treasury Center</h2><p>Participant A · tdUSD issuance, reserves, liquidity, GL and compliance</p></div>
+      <div><h2>Treasury Center</h2><p>Participant A · tdUSD issuance, ledgers, liquidity, GL and compliance</p></div>
       <div class="r"><span class="bdg b-dark" id="tcClock">—</span></div>
     </div>
     <div class="tc">
       <div class="kpis" id="kpis"></div>
       <div class="tcgrid">
         <div class="stack3">
-          <div class="panel"><h3>Reserve vs token supply<span class="r">tdUSD outstanding, BDA reserve, GL 210500</span></h3>
-            <div class="in"><div class="fig" id="figSupply"><svg id="svgSupply" aria-label="Supply, reserve and GL balance over time"></svg></div>
-            <div class="leg"><span><i style="background:var(--ag-orange)"></i>tdUSD on the network</span><span><i style="background:var(--ag-gray-dark)"></i>Hogan BDA reserve</span><span><i style="background:var(--teal)"></i>Oracle GL 210500</span></div></div></div>
+          <div class="panel"><h3>Token supply vs ledgers<span class="r">network supply, Hogan CDA total, GL 210500</span></h3>
+            <div class="in"><div class="fig" id="figSupply"><svg id="svgSupply" aria-label="Token supply, Hogan CDA total and GL balance over time"></svg></div>
+            <div class="leg"><span><i style="background:var(--ag-orange)"></i>tdUSD on the network</span><span><i style="background:var(--ag-gray-dark)"></i>Hogan CDA total</span><span><i style="background:var(--teal)"></i>Oracle GL 210500</span></div></div></div>
           <div class="panel"><h3>Settlement + reconciliation<span class="r" id="reconMeta"></span></h3>
             <div class="in scroll"><table class="tbl stk" id="tblTx"></table></div></div>
           <div class="panel"><h3>Oracle Fusion GL journals<span class="r">Source TDN · Category Tokenized Deposits</span></h3>
@@ -371,17 +371,17 @@ const SEED = {
     'C-DANA':   { name: 'Dana Whitfield', dda: '1000200011', ddaBal: 12450, cda: '7000200011', tokens: 1000, wallet: '0x7A3F9e01b2C4d5E6f7081a2B3c4D5e6F7a8bC41D' }
   },
   partB: { 'B-LAKE': { name: 'Lakeside Produce Co', wallet: '0x4E8a0B1c2D3e4F5061728394aBcDeF0123456789' }, 'B-SUMMIT': { name: 'Summit Analytics LLC', wallet: '0x9D1c2B3a4F5e6D7c8B9a0F1e2D3c4B5a6F7e8D90' } },
-  bda: 26000, gl: { '101100': 5000000, '210100': 311350, '210500': 26000, '230100': 0 },
+  cdaTotal: 26000, gl: { '101100': 5000000, '210100': 311350, '210500': 26000, '230100': 0 },
   cbOpen: 5000000, floor: 4000000, seq: 120, block: 18200450, journalSeq: 880,
-  txns: [], journals: [], cases: [], history: [{ l: 'Open', chain: 26000, bda: 26000, gl: 26000 }]
+  txns: [], journals: [], cases: [], history: [{ l: 'Open', chain: 26000, cda: 26000, gl: 26000 }]
 };
-const KEY = 'agt-tdn-flow-v1';
+const KEY = 'agt-tdn-flow-v2';
 let S;
 try { const j = localStorage.getItem(KEY); S = j ? JSON.parse(j) : null; } catch (e) { S = null; }
 if (!S) S = JSON.parse(JSON.stringify(SEED));
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
 const chainSupply = () => r2(Object.values(S.cust).reduce((t, c) => t + c.tokens, 0));
-const ACCT = { '101100': 'Cash – central bank settlement account', '210100': 'Customer DDA deposits', '210500': 'Tokenized deposit liability (BDA)', '230100': 'Due to network participants' };
+const ACCT = { '101100': 'Cash – central bank settlement account', '210100': 'Customer DDA deposits', '210500': 'Tokenized deposit liability (CDAs)', '230100': 'Due to network participants' };
 const cs = a => `101-4100-${a}-TDN-000`;
 
 /* ═════════ diagram layout ═════════ */
@@ -399,7 +399,7 @@ const N = {
   gl:      { x: 960, y: 402, w: 220, h: 62, t: 'Oracle Fusion GL', s: 'FBDI journal import' },
   settle:  { x: 690, y: 402, w: 220, h: 62, t: 'Settlement', s: 'book · on-ledger · Fedwire' },
   recon:   { x: 420, y: 402, w: 220, h: 62, t: 'Reconciliation', s: 'chain · Hogan · GL' },
-  treas:   { x: 20,  y: 394, w: 345, h: 78, t: 'Treasury Center', s: 'reserve · liquidity · recon · cases' }
+  treas:   { x: 20,  y: 394, w: 345, h: 78, t: 'Treasury Center', s: 'supply · liquidity · recon · cases' }
 };
 const E = {
   'client-apim': ['client', 'r', 'apim', 'l'], 'apim-orch': ['apim', 'r', 'orch', 'l'],
@@ -438,8 +438,8 @@ function drawDiagram() {
     nodeEls[id] = ng;
   });
   // ledger chips
-  const L = N.ledgers; const cw = 92;
-  [['DDA', 'dda'], ['BDA', 'bda'], ['CDA', 'cda']].forEach(([lab, k], i) => {
+  const L = N.ledgers; const cw = 141;
+  [['DDA · CHECKING', 'dda'], ['CDA · TOKENS', 'cda']].forEach(([lab, k], i) => {
     const cg = sv('g', { class: 'chip' }, nodeEls.ledgers);
     const x = L.x + 10 + i * (cw + 8), y = L.y + 36;
     sv('rect', { x, y, width: cw, height: 56, rx: 6 }, cg);
@@ -461,10 +461,10 @@ function resetDiagram() {
   setChips(null);
 }
 function setChips(c, bump) {
-  if (!c) { ['dda', 'bda', 'cda'].forEach(k => { chipEls[k].v.textContent = '—'; chipEls[k].g.classList.remove('bump'); }); return; }
-  ['dda', 'bda', 'cda'].forEach(k => {
+  if (!c) { ['dda', 'cda'].forEach(k => { chipEls[k].v.textContent = '—'; chipEls[k].g.classList.remove('bump'); }); return; }
+  ['dda', 'cda'].forEach(k => {
     if (c[k] == null) return;
-    chipEls[k].v.textContent = k === 'cda' ? fmt0(c[k]).replace('$', '') + ' td' : fmt0(c[k]);
+    chipEls[k].v.textContent = k === 'cda' ? fmt0(c[k]).replace('$', '') + ' tdUSD' : fmt0(c[k]);
     chipEls[k].g.classList.toggle('bump', !!(bump && bump.includes(k)));
   });
 }
@@ -534,7 +534,7 @@ function build(p, resume) {
   const toName = onus ? dc.name : interbank ? db.name + ' (Participant B)' : '';
   const toWallet = onus ? dc.wallet : interbank ? db.wallet : '';
   // post-state for chips
-  const bdaAfter = p.action === 'MINT' ? S.bda + amt : p.action === 'BURN' ? S.bda - amt : interbank ? S.bda - amt : S.bda;
+  const cdaTotAfter = p.action === 'MINT' ? S.cdaTotal + amt : (p.action === 'BURN' || interbank) ? S.cdaTotal - amt : S.cdaTotal;
   const ddaAfter = p.action === 'MINT' ? c.ddaBal - amt : p.action === 'BURN' ? c.ddaBal + amt : c.ddaBal;
   const cdaAfter = p.action === 'MINT' ? c.tokens + amt : c.tokens - amt;
   const supplyAfter = p.action === 'MINT' ? chainSupply() + amt : p.action === 'BURN' || interbank ? chainSupply() - amt : chainSupply();
@@ -615,8 +615,7 @@ POST https://zosconnect.core.internal:9443/hogan/tdn/v1/${p.action.toLowerCase()
               EXEC CICS SYNCPOINT ROLLBACK END-EXEC
            ELSE
               SUBTRACT TDN-AMT FROM DDA-LEDGER-BAL       *> DDA ${c.dda}
-              ADD      TDN-AMT TO   BDA-LEDGER-BAL       *> BDA reserve
-              MOVE     TDN-AMT TO   CDA-PENDING-AMT      *> CDA ${c.cda}
+              MOVE     TDN-AMT TO   CDA-PENDING-AMT      *> CDA ${c.cda}, straight from the DDA
               EXEC CICS REWRITE FILE('IDSDDAM') FROM(DDA-MASTER-REC) END-EXEC
               PERFORM 4000-PUT-TDN-REQUEST               *> MQ TDN.MINT.REQUEST
            END-IF.`,
@@ -629,7 +628,7 @@ POST https://zosconnect.core.internal:9443/hogan/tdn/v1/${p.action.toLowerCase()
               SUBTRACT TDN-AMT FROM CDA-TOKEN-BAL        *> CDA ${c.cda}
               MOVE     TDN-AMT TO   CDA-PENDING-AMT
               PERFORM 4000-PUT-TDN-REQUEST               *> MQ TDN.BURN.REQUEST
-      *       BDA debit + DDA credit post in 5000- after the burn
+      *       DDA credit posts in 5000- after the burn confirms
            END-IF.`,
     XFER: `       2000-TRANSFER.
            IF CDA-TOKEN-BAL < TDN-AMT
@@ -638,21 +637,18 @@ POST https://zosconnect.core.internal:9443/hogan/tdn/v1/${p.action.toLowerCase()
            ELSE
               SUBTRACT TDN-AMT FROM CDA-TOKEN-BAL        *> CDA ${c.cda}
               MOVE     TDN-AMT TO   CDA-PENDING-AMT${interbank ? `
-      *       Leaving our books: reserve drops, due-to-B is raised
-              SUBTRACT TDN-AMT FROM BDA-LEDGER-BAL       *> BDA reserve
+      *       Leaving our books: CDA liability drops, due-to-B is raised
               MOVE 'B' TO TDN-DEST-PARTICIPANT` : `
-              MOVE 'A' TO TDN-DEST-PARTICIPANT           *> on-us: BDA unchanged`}
+              MOVE 'A' TO TDN-DEST-PARTICIPANT           *> on-us: stays in our CDAs`}
               PERFORM 4000-PUT-TDN-REQUEST               *> MQ TDN.XFER.REQUEST
            END-IF.`
   }[p.action];
   const ledgerTxt = (p.action === 'MINT' ? `DDA ${c.dda}   ${fmt(c.ddaBal)}  ->  ${fmt(ddaAfter)}   (DR ${fmt(amt)})
-BDA 9000000001   ${fmt(S.bda)}  ->  ${fmt(bdaAfter)}   (CR ${fmt(amt)}  token reserve)
-CDA ${c.cda}   pending +${fmt(amt)} tdUSD (credited after network confirms)`
+CDA ${c.cda}   pending +${fmt(amt)} tdUSD  (DDA → CDA, credited after the network confirms)`
     : p.action === 'BURN' ? `CDA ${c.cda}   ${fmt(c.tokens)}  ->  ${fmt(cdaAfter)} tdUSD   (tokens reserved for burn)
-BDA 9000000001   debit pending ${fmt(amt)}  (after burn confirms)
-DDA ${c.dda}   credit pending ${fmt(amt)}  (after burn confirms)`
+DDA ${c.dda}   credit pending ${fmt(amt)}  (CDA → DDA after the burn confirms)`
     : `CDA ${c.cda}   ${fmt(c.tokens)}  ->  ${fmt(cdaAfter)} tdUSD
-${interbank ? `BDA 9000000001   ${fmt(S.bda)}  ->  ${fmt(bdaAfter)}   (tdUSD leaves Participant A)\nDue to Participant B   +${fmt(amt)}  (settles over Fedwire)` : `CDA ${dc.cda}   ${fmt(dc.tokens)}  ->  ${fmt(dc.tokens + amt)} tdUSD (after network confirms)\nBDA 9000000001   unchanged ${fmt(S.bda)}  (on-us: same liability)`}`) + `\nUnit of work held open until the network replies (MQ correlation ${corr.slice(0, 8)})`;
+${interbank ? `tdUSD leaves Participant A's CDAs\nDue to Participant B   +${fmt(amt)}  (settles over Fedwire)` : `CDA ${dc.cda}   ${fmt(dc.tokens)}  ->  ${fmt(dc.tokens + amt)} tdUSD (after network confirms)\nHogan CDA total unchanged ${fmt(S.cdaTotal)}  (on-us: same liability)`}`) + `\nUnit of work held open until the network replies (MQ correlation ${corr.slice(0, 8)})`;
   const call = p.action === 'MINT' ? `mint(${c.wallet.slice(0, 10)}…, ${plain(amt)})` : p.action === 'BURN' ? `burn(${c.wallet.slice(0, 10)}…, ${plain(amt)})` : interbank ? `transferInterbank(${c.wallet.slice(0, 10)}…, PARTICIPANT-B, ${toWallet.slice(0, 10)}…, ${plain(amt)})` : `transfer(${c.wallet.slice(0, 10)}…, ${toWallet.slice(0, 10)}…, ${plain(amt)})`;
   const net = `// MQPUT1 TDN.${p.action}.REQUEST  ->  network gateway  ->  tdUSD contract
 { "ref": "${txid}", "op": "${p.action.toLowerCase()}", "amount": "${plain(amt)}",
@@ -661,7 +657,7 @@ ${interbank ? `BDA 9000000001   ${fmt(S.bda)}  ->  ${fmt(bdaAfter)}   (tdUSD lea
   const receipt = `// receipt (MQGET reply, correlated)
 { "status": "0x1", "blockNumber": ${block}, "txHash": "${txs}",
   "finality": "instant (BFT)", "event": "${p.action === 'MINT' ? 'Minted' : p.action === 'BURN' ? 'Burned' : interbank ? 'InterbankTransfer' : 'Transfer'}" }
-// Hogan 5000-CONFIRM: ${p.action === 'MINT' ? `CDA ${c.cda} +${fmt(amt)} tdUSD` : p.action === 'BURN' ? `BDA -${fmt(amt)}, DDA ${c.dda} +${fmt(amt)}` : interbank ? `due-to-B confirmed ${fmt(amt)}` : `CDA ${dc.cda} +${fmt(amt)} tdUSD`}; EXEC CICS SYNCPOINT`;
+// Hogan 5000-CONFIRM: ${p.action === 'MINT' ? `CDA ${c.cda} +${fmt(amt)} tdUSD` : p.action === 'BURN' ? `DDA ${c.dda} +${fmt(amt)}` : interbank ? `due-to-B confirmed ${fmt(amt)}` : `CDA ${dc.cda} +${fmt(amt)} tdUSD`}; EXEC CICS SYNCPOINT`;
   const resp = f.hold ? `HTTP/1.1 202 Accepted\nX-Correlation-Id: ${corr}\n\n{ "txnId": "${txid}", "status": "PENDING_REVIEW", "caseId": "${caseId}" }`
     : f.badamt ? `HTTP/1.1 400 Bad Request\n\n{ "statusCode": 400, "message": "Body of the request does not conform to the schema: amount must be > 0" }`
     : f.reject ? `HTTP/1.1 422 Unprocessable Content\nX-Correlation-Id: ${corr}\n\n{ "txnId": "${txid}", "status": "REJECTED", "reason": "${f.nsf ? `TDN2102E collected funds ${fmt(c.ddaBal)} < ${fmt(amt)}` : `TDN2201E token balance ${fmt(c.tokens)} < ${fmt(amt)}`}" }`
@@ -691,18 +687,18 @@ ${f.gldelay ? '# -> ESS request queued; journal import has not run yet (recon wi
   </CdtTrfTxInf>
 </FICdtTrf>
 <!-- Fedwire Funds pacs.009 accepted: central bank account -${fmt(amt)} -->`
-    : `<!-- ${p.action === 'XFER' ? 'On-us transfer settles on the network ledger at block ' + block + '. Final, no external leg.' : 'Book transfer inside Participant A: DDA and BDA are both our liabilities. Settled when posted; no external leg.'} -->
+    : `<!-- ${p.action === 'XFER' ? 'On-us transfer settles on the network ledger at block ' + block + '. Final, no external leg.' : 'Book transfer inside Participant A: DDA and CDA are both our deposit liabilities. Settled when posted; no external leg.'} -->
 <Settlement txn="${txid}" method="${p.action === 'XFER' ? 'ON_LEDGER' : 'BOOK_TRANSFER'}" status="SETTLED" />`;
   const reconTxt = `# three-way reconciliation, tdUSD issued by Participant A
 source                       balance
 network (tdUSD-A supply)     ${fmt(supplyAfter)}
-Hogan BDA 9000000001         ${fmt(bdaAfter)}
+Hogan CDA total (all CDAs)   ${fmt(cdaTotAfter)}
 Oracle GL 210500             ${fmt(glAfter)}
 
-result: ${Math.abs(supplyAfter - glAfter) < .005 && Math.abs(supplyAfter - bdaAfter) < .005 ? 'MATCHED - fully backed, books agree' : `BREAK ${fmt(supplyAfter - glAfter)} on GL 210500 (timing: journal ${jeId} not imported)`}`;
+result: ${Math.abs(supplyAfter - glAfter) < .005 && Math.abs(supplyAfter - cdaTotAfter) < .005 ? 'MATCHED - network, Hogan CDAs and GL agree' : `BREAK ${fmt(supplyAfter - glAfter)} on GL 210500 (timing: journal ${jeId} not imported)`}`;
   const treasTxt = `{ "txnId": "${txid}", "status": "${f.gldelay ? 'SETTLED_RECON_BREAK' : 'SETTLED'}",
-  "tdusdOutstanding": "${plain(supplyAfter)}", "bdaReserve": "${plain(bdaAfter)}",
-  "coverage": "${supplyAfter ? (bdaAfter / supplyAfter * 100).toFixed(1) : '100.0'}%",
+  "tdusdOutstanding": "${plain(supplyAfter)}", "hoganCdaTotal": "${plain(cdaTotAfter)}",
+  "gl210500": "${plain(glAfter)}",
   "centralBankBalance": "${plain(S.gl['101100'] - (interbank ? amt : 0))}",
   "openCases": ${S.cases.filter(x => x.status === 'Open').length}, "reconBreaks": ${S.txns.filter(t => t.recon && !t.recon.gl).length + (f.gldelay ? 1 : 0)} }`;
   const caseTxt = `# orchestrator -> Treasury Center compliance queue
@@ -739,16 +735,16 @@ next: analyst Release (resumes at z/OS Connect) or Reject (client notified)`;
     if (f.reject) {
       add({ k: 'resp', n: 'Client gets 422 Rejected', d: 'unit of work rolled back; nothing posted', edges: [['zcon-cics', 1, 'bad', '422'], ['orch-zcon', 1, 'bad', '422'], ['apim-orch', 1, 'bad', '422'], ['client-apim', 1, 'bad', '422']], node: 'client', state: { cics: ['fail', 'ROLLBACK'], client: ['fail', '422'] }, code: resp, lang: 'HTTP', ms: 12, fail: 1 });
     } else {
-      const chipsMid = p.action === 'MINT' ? { dda: ddaAfter, bda: bdaAfter, cda: c.tokens } : { dda: c.ddaBal, bda: interbank ? bdaAfter : S.bda, cda: cdaAfter };
-      add({ k: 'ledger', n: 'DDA · BDA · CDA movement', d: p.action === 'MINT' ? 'DDA debited, BDA reserve credited' : p.action === 'BURN' ? 'tokens reserved for burn' : interbank ? 'CDA debited, BDA reserve drops' : 'CDA debited (on-us)', edges: [['cics-ledgers', 0, 'req', 'post']], node: 'ledgers', state: { cics: ['done', '✓'] }, chips: chipsMid, bump: p.action === 'MINT' ? ['dda', 'bda'] : interbank ? ['cda', 'bda'] : ['cda'], code: ledgerTxt, lang: 'TEXT', ms: 6 });
+      const chipsMid = p.action === 'MINT' ? { dda: ddaAfter, cda: c.tokens } : { dda: c.ddaBal, cda: cdaAfter };
+      add({ k: 'ledger', n: 'DDA ↔ CDA movement', d: p.action === 'MINT' ? 'DDA debited, CDA credit pending' : p.action === 'BURN' ? 'CDA debited, tokens reserved for burn' : interbank ? 'CDA debited, due to Participant B raised' : 'CDA debited (on-us)', edges: [['cics-ledgers', 0, 'req', 'post']], node: 'ledgers', state: { cics: ['done', '✓'] }, chips: chipsMid, bump: p.action === 'MINT' ? ['dda'] : ['cda'], code: ledgerTxt, lang: 'TEXT', ms: 6 });
       add({ k: 'net', n: `Network ${VERB[p.action].toLowerCase()} over MQ`, d: call.split('(')[0] + '() on the tdUSD contract', edges: [['ledgers-tdn', 0, 'req', p.action.toLowerCase()]], node: 'tdn', code: net, lang: 'JSON', ms: 380 });
-      const chipsEnd = { dda: ddaAfter, bda: bdaAfter, cda: cdaAfter };
-      add({ k: 'confirm', n: 'Network confirms, Hogan commits', d: `block ${block}, tx ${tx.slice(0, 10)}…`, edges: [['ledgers-tdn', 1, 'ret', 'block ' + block]], node: 'ledgers', state: { tdn: ['done', 'BLOCK ' + String(block).slice(-4)] }, chips: chipsEnd, bump: p.action === 'MINT' ? ['cda'] : p.action === 'BURN' ? ['dda', 'bda'] : [], code: receipt, lang: 'JSON', ms: 40 });
+      const chipsEnd = { dda: ddaAfter, cda: cdaAfter };
+      add({ k: 'confirm', n: 'Network confirms, Hogan commits', d: `block ${block}, tx ${tx.slice(0, 10)}…`, edges: [['ledgers-tdn', 1, 'ret', 'block ' + block]], node: 'ledgers', state: { tdn: ['done', 'BLOCK ' + String(block).slice(-4)] }, chips: chipsEnd, bump: p.action === 'MINT' ? ['cda'] : p.action === 'BURN' ? ['dda'] : [], code: receipt, lang: 'JSON', ms: 40 });
       add({ k: 'resp', n: 'Client gets 201 Completed', d: 'synchronous path done; finance steps continue async', edges: [['cics-ledgers', 1, 'ret', '201'], ['zcon-cics', 1, 'ret', '201'], ['orch-zcon', 1, 'ret', '201'], ['apim-orch', 1, 'ret', '201'], ['client-apim', 1, 'ret', '201']], node: 'client', state: { ledgers: ['done', '✓'], cics: ['done', '✓'], zcon: ['done', '✓'], orch: ['done', '✓'], apim: ['done', '✓'], client: ['done', '201'] }, code: resp, lang: 'HTTP', ms: 15, fast: 1 });
       add({ k: 'gl', n: onus ? 'GL: no journal (on-us)' : f.gldelay ? 'Oracle GL import queued' : 'Journal to Oracle Fusion GL', d: onus ? 'subledger only; 210500 unchanged' : f.gldelay ? `${jeId} waiting on the import job` : `${jeId} · ${lines.length} lines`, edges: [['ledgers-gl', 0, f.gldelay ? 'hold' : 'req', onus ? 'n/a' : 'FBDI']], node: 'gl', state: { gl: [f.gldelay ? 'hold' : 'done', onus ? 'N/A' : f.gldelay ? 'QUEUED' : 'POSTED'] }, code: fbdi, lang: 'CSV', ms: 2400 });
       add({ k: 'settle', n: interbank ? 'Fedwire settlement to Participant B' : 'Settlement', d: interbank ? 'pacs.009 from the central bank account' : p.action === 'XFER' ? 'final on the network ledger' : 'book transfer, settled at posting', edges: [['gl-settle', 0, 'req', interbank ? 'pacs.009' : 'book']], node: 'settle', state: { settle: ['done', 'SETTLED'] }, code: settle, lang: 'XML', ms: interbank ? 1900 : 5 });
-      add({ k: 'recon', n: 'Three-way reconciliation', d: f.gldelay ? 'break on GL 210500 (timing)' : 'network = Hogan BDA = GL', edges: [['settle-recon', 0, 'req', 'recon']], node: 'recon', state: { recon: [f.gldelay ? 'hold' : 'done', f.gldelay ? 'BREAK' : 'MATCHED'] }, code: reconTxt, lang: 'TEXT', ms: 60, hold: f.gldelay });
-      add({ k: 'treas', n: 'Treasury Center updated', d: 'reserve, liquidity, GL and recon refreshed', edges: [['recon-treas', 0, 'req', 'update']], node: 'treas', state: { treas: ['done', 'UPDATED'] }, code: treasTxt, lang: 'JSON', ms: 8 });
+      add({ k: 'recon', n: 'Three-way reconciliation', d: f.gldelay ? 'break on GL 210500 (timing)' : 'network = Hogan CDAs = GL', edges: [['settle-recon', 0, 'req', 'recon']], node: 'recon', state: { recon: [f.gldelay ? 'hold' : 'done', f.gldelay ? 'BREAK' : 'MATCHED'] }, code: reconTxt, lang: 'TEXT', ms: 60, hold: f.gldelay });
+      add({ k: 'treas', n: 'Treasury Center updated', d: 'supply, liquidity, GL and recon refreshed', edges: [['recon-treas', 0, 'req', 'update']], node: 'treas', state: { treas: ['done', 'UPDATED'] }, code: treasTxt, lang: 'JSON', ms: 8 });
     }
   }
 
@@ -772,10 +768,10 @@ next: analyst Release (resumes at z/OS Connect) or Reject (client notified)`;
     if (!existing) S.txns.unshift(row);
     if (f.reject) { Object.assign(row, { status: 'REJECTED', where: f.nsf ? 'Hogan NSF' : 'Hogan low tokens', settle: '—', recon: null }); return touched; }
     // ledgers
-    if (p.action === 'MINT') { c.ddaBal = r2(c.ddaBal - amt); c.tokens = r2(c.tokens + amt); S.bda = r2(S.bda + amt); }
-    if (p.action === 'BURN') { c.ddaBal = r2(c.ddaBal + amt); c.tokens = r2(c.tokens - amt); S.bda = r2(S.bda - amt); }
+    if (p.action === 'MINT') { c.ddaBal = r2(c.ddaBal - amt); c.tokens = r2(c.tokens + amt); S.cdaTotal = r2(S.cdaTotal + amt); }
+    if (p.action === 'BURN') { c.ddaBal = r2(c.ddaBal + amt); c.tokens = r2(c.tokens - amt); S.cdaTotal = r2(S.cdaTotal - amt); }
     if (onus) { c.tokens = r2(c.tokens - amt); dc.tokens = r2(dc.tokens + amt); }
-    if (interbank) { c.tokens = r2(c.tokens - amt); S.bda = r2(S.bda - amt); }
+    if (interbank) { c.tokens = r2(c.tokens - amt); S.cdaTotal = r2(S.cdaTotal - amt); }
     S.block = block;
     // GL
     let je = null;
@@ -800,7 +796,7 @@ function postJE(je) {
   });
   je.status = 'Posted';
 }
-function snapshot(l) { S.history.push({ l, chain: chainSupply(), bda: S.bda, gl: S.gl['210500'] }); if (S.history.length > 40) S.history.splice(1, 1); }
+function snapshot(l) { S.history.push({ l, chain: chainSupply(), cda: S.cdaTotal, gl: S.gl['210500'] }); if (S.history.length > 40) S.history.splice(1, 1); }
 
 /* ═════════ runner ═════════ */
 let running = false, stepMode = false, stepResolve = null, current = null, executed = [];
@@ -813,7 +809,7 @@ async function run(p, resume) {
   running = true; executed = [];
   const T = build(p, resume); current = T;
   resetDiagram();
-  setChips({ dda: T.ctx.c.ddaBal, bda: S.bda, cda: T.ctx.c.tokens });
+  setChips({ dda: T.ctx.c.ddaBal, cda: T.ctx.c.tokens });
   $('#txId').textContent = `${T.txid} · ${VERB[p.action]} ${fmt(T.ctx.amt)} tdUSD`;
   $('#result').className = 'result'; $('#result').innerHTML = '';
   renderTimeline(T, -1);
@@ -865,7 +861,7 @@ $('#copyBtn').onclick = async () => { try { await navigator.clipboard.writeText(
 
 /* ═════════ form ═════════ */
 let curAction = 'MINT';
-const HINT = { MINT: 'DDA → BDA reserve, tdUSD issued to the customer\'s CDA', BURN: 'tdUSD burned from the CDA, BDA → DDA', XFER: 'CDA → another customer here (on-us) or at Participant B (interbank)' };
+const HINT = { MINT: 'DDA → CDA: money leaves checking, tdUSD lands in the customer\'s CDA', BURN: 'CDA → DDA: tdUSD burned, checking credited', XFER: 'CDA → another customer here (on-us) or at Participant B (interbank)' };
 function fillForm() {
   const keep = $('#cust').value;
   $('#cust').innerHTML = Object.entries(S.cust).map(([k, c]) => `<option value="${k}">${esc(c.name)} · DDA ${fmt0(c.ddaBal)} · ${fmt0(c.tokens).slice(1)} tdUSD</option>`).join('');
@@ -888,15 +884,15 @@ $('#resetBtn').onclick = () => { if (running) return; S = JSON.parse(JSON.string
 function kpi(l, v, sub, cls) { return `<div class="kpi ${cls || ''}"><div class="l">${l}</div><div class="v">${v}</div><div class="sub">${sub}</div></div>`; }
 function renderTreasury(touched = []) {
   const T = new Set(touched);
-  const sup = chainSupply(), bda = S.bda, gl = S.gl['210500'], cb = S.gl['101100'];
-  const backed = Math.abs(sup - bda) < .005, booksAgree = Math.abs(sup - gl) < .005;
+  const sup = chainSupply(), cdaT = S.cdaTotal, gl = S.gl['210500'], cb = S.gl['101100'];
+  const ledgerOk = Math.abs(sup - cdaT) < .005, booksAgree = Math.abs(sup - gl) < .005;
   const open = S.cases.filter(c => c.status === 'Open').length;
   const breaks = S.txns.filter(t => t.recon && !t.recon.gl).length;
   const outflow = S.cbOpen - cb;
   $('#tcClock').textContent = `As of ${hms(now())}`;
   $('#kpis').innerHTML = [
     kpi('tdUSD outstanding', fmt0(sup), `${Object.values(S.cust).filter(c => c.tokens > 0).length} custody accounts`, 'acc'),
-    kpi('BDA reserve', fmt0(bda), backed ? 'fully backed · 100.0%' : 'coverage ' + (bda / sup * 100).toFixed(1) + '%', backed ? 'ok' : 'bad'),
+    kpi('Hogan CDA total', fmt0(cdaT), ledgerOk ? 'matches network supply' : 'off by ' + fmt0(sup - cdaT), ledgerOk ? 'ok' : 'bad'),
     kpi('GL 210500', fmt0(gl), booksAgree ? 'agrees with the network' : 'off by ' + fmt0(sup - gl), booksAgree ? 'ok' : 'warn'),
     kpi('Central bank balance', fmt0(cb), outflow > 0 ? `${fmt0(outflow)} sent today` : 'no outflows today', cb < S.floor ? 'bad' : 'ok'),
     kpi('Open compliance cases', String(open), open ? 'saga paused, nothing posted' : 'queue clear', open ? 'warn' : 'ok'),
@@ -924,12 +920,12 @@ function renderTreasury(touched = []) {
   $('#cases').innerHTML = S.cases.length ? S.cases.slice(0, 8).map(c => `<div class="case"><span class="bdg ${c.status === 'Open' ? 'b-warn' : c.status === 'Released' ? 'b-ok' : 'b-gray'}">${c.status}</span><div class="w"><b>${c.id}</b> · ${esc(c.type)}<small>${esc(c.reason)} · ${c.txid} · ${VERB[c.params.action]} ${fmt(num(c.params.amount))}</small></div>${c.status === 'Open' ? `<button class="btn btn--p btn--s" data-rel="${c.id}" type="button">Release</button><button class="btn btn--o btn--s" data-rej="${c.id}" type="button">Reject</button>` : ''}</div>`).join('') : '<div class="empty">No AML, BSA or fraud holds. Try a scenario like "AML alert".</div>';
   // breaks
   const br = S.txns.filter(t => t.recon && !t.recon.gl);
-  $('#breaks').innerHTML = br.length ? br.map(t => `<div class="case"><span class="bdg b-warn">Timing</span><div class="w"><b>${t.id}</b> · GL 210500 short by ${fmt(t.amount)}<small>Journal ${t.je} is waiting on the Oracle journal import job</small></div><button class="btn btn--p btn--s" data-post="${t.je}" type="button">Run journal import</button></div>`).join('') : `<div class="empty">No breaks. Network supply ${fmt(sup)} = Hogan BDA ${fmt(bda)} = GL 210500 ${fmt(gl)}.</div>`;
+  $('#breaks').innerHTML = br.length ? br.map(t => `<div class="case"><span class="bdg b-warn">Timing</span><div class="w"><b>${t.id}</b> · GL 210500 short by ${fmt(t.amount)}<small>Journal ${t.je} is waiting on the Oracle journal import job</small></div><button class="btn btn--p btn--s" data-post="${t.je}" type="button">Run journal import</button></div>`).join('') : `<div class="empty">No breaks. Network supply ${fmt(sup)} = Hogan CDA total ${fmt(cdaT)} = GL 210500 ${fmt(gl)}.</div>`;
 }
 function drawSupply() {
   const s = $('#svgSupply'), W = s.clientWidth || 600, H = s.clientHeight || 230, h = S.history;
   const pad = { l: 64, r: 12, t: 12, b: 26 };
-  const vals = h.flatMap(x => [x.chain, x.bda, x.gl]);
+  const vals = h.flatMap(x => [x.chain, x.cda, x.gl]);
   let lo = Math.min(...vals), hi = Math.max(...vals); if (hi - lo < 1000) { hi += 500; lo = Math.max(0, lo - 500); }
   const X = i => pad.l + (h.length < 2 ? (W - pad.l - pad.r) / 2 : i * (W - pad.l - pad.r) / (h.length - 1));
   const Y = v => pad.t + (1 - (v - lo) / (hi - lo)) * (H - pad.t - pad.b);
@@ -938,7 +934,7 @@ function drawSupply() {
   for (let i = 0; i <= 3; i++) { const v = lo + (hi - lo) * i / 3, y = Y(v); g += `<line x1="${pad.l}" x2="${W - pad.r}" y1="${y}" y2="${y}" stroke="#eee"/><text x="${pad.l - 6}" y="${y + 4}" text-anchor="end" font-size="11" fill="#888" font-family="IBM Plex Mono">${(v / 1000).toFixed(v >= 100000 ? 0 : 1)}k</text>`; }
   const step = Math.max(1, Math.ceil(h.length / (W < 520 ? 3 : 6)));
   h.forEach((x, i) => { if (i % step === 0 || i === h.length - 1) g += `<text x="${X(i)}" y="${H - 6}" text-anchor="${i === 0 && h.length > 1 ? 'start' : i === h.length - 1 && h.length > 1 ? 'end' : 'middle'}" font-size="10.5" fill="#888" font-family="Barlow">${esc(x.l)}</text>`; });
-  g += line('gl', '#1F8A8A', 2.5, 1) + line('bda', '#404040', 5) + line('chain', '#E8520A', 2.2);
+  g += line('gl', '#1F8A8A', 2.5, 1) + line('cda', '#404040', 5) + line('chain', '#E8520A', 2.2);
   const last = h[h.length - 1]; g += `<circle cx="${X(h.length - 1)}" cy="${Y(last.chain)}" r="4" fill="#E8520A"/>`;
   s.setAttribute('viewBox', `0 0 ${W} ${H}`); s.innerHTML = g;
 }

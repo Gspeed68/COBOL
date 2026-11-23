@@ -331,14 +331,13 @@ const SEED = {
     '1000200037': { name: 'Rivera Hardware LLC', type: 'Business checking', cif: 'C00020911', ledger: 48900.00, holds: 1500, od: 5000, status: 'A', addr: '220 Main St, Hilliard OH' },
     '1000200045': { name: 'Jordan Patel',        type: 'Personal checking', cif: 'C00031002', ledger: 85.12,    holds: 0,    od: 0,    status: 'F', addr: '9 Elm Ct, Dublin OH' }
   },
-  bda: { acct: '9000000001', name: 'TDN settlement BDA (omnibus reserve)', ledger: 26000.00 },
   cda: {
     '7000200011': { name: 'Dana Whitfield',      dda: '1000200011', tokens: 1000.00,  wallet: '0x7A3F9e01b2C4d5E6f7081a2B3c4D5e6F7a8bC41D' },
     '7000200037': { name: 'Rivera Hardware LLC', dda: '1000200037', tokens: 25000.00, wallet: '0x19B2c3D4e5F60718293a4B5c6D7e8F9012347E0A' }
   },
   seq: 4471, block: 18200450, journal: []
 };
-const KEY = 'agt-hogan-console-v1';
+const KEY = 'agt-hogan-console-v2';
 let S;
 function load() { try { const j = localStorage.getItem(KEY); if (j) { S = JSON.parse(j); return; } } catch (e) {} S = JSON.parse(JSON.stringify(SEED)); }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
@@ -743,10 +742,10 @@ SC.push({
 /* ── 3. Tokenized deposit network ─────────────── */
 SC.push({
   id: 'tdn', tab: 'Tokenized Network', tran: 'ITK1', prog: 'TDNXF300',
-  blurb: 'Three accounts work together. The <b>DDA</b> is the customer\'s checking account. The <b>BDA</b> (Bank Deposit Account) is the bank\'s omnibus reserve that backs every token. The <b>CDA</b> (Custody Deposit Account) holds the customer\'s tokenized position on the network. Mint moves DDA → BDA and issues tokens to the CDA; Burn reverses it; Transfer moves tokens CDA → CDA with no cash movement.',
-  flow: [['Teller / app', 'request'], ['CICS ITK1', 'TDNXF300'], ['DDA · BDA · CDA', 'Hogan ledgers'], ['TDN gateway', 'MQ + token contract'], ['Reserve check', 'BDA = supply']],
+  blurb: 'Two accounts work together. The <b>DDA</b> is the customer\'s checking account. The <b>CDA</b> (Custody Deposit Account) holds the customer\'s tokenized position on the network. <b>Mint</b> moves money DDA → CDA and issues tdUSD; <b>Burn</b> moves it CDA → DDA and retires the tokens; <b>Transfer</b> moves tokens CDA → CDA with no cash movement.',
+  flow: [['Teller / app', 'request'], ['CICS ITK1', 'TDNXF300'], ['DDA ↔ CDA', 'Hogan ledgers'], ['TDN gateway', 'MQ + token contract'], ['Ledger check', 'CDA total = supply']],
   fields: [
-    { id: 'action', label: 'Action', type: 'select', full: 1, options: () => [['MINT', 'MINT · Tokenize: DDA → BDA → CDA'], ['BURN', 'BURN · Redeem: CDA → BDA → DDA'], ['XFER', 'XFER · On-network: CDA → CDA']] },
+    { id: 'action', label: 'Action', type: 'select', full: 1, options: () => [['MINT', 'MINT · Tokenize: DDA → CDA'], ['BURN', 'BURN · Redeem: CDA → DDA'], ['XFER', 'XFER · On-network: CDA → CDA']] },
     { id: 'acct', label: 'Account', type: 'select', full: 1, options: v => v.action === 'MINT' ? ddaOpts() : cdaOpts(), labelFn: v => v.action === 'MINT' ? 'Customer DDA (debit)' : 'Source CDA' },
     { id: 'cdaTo', label: 'Destination CDA', type: 'select', full: 1, options: cdaOpts, show: v => v.action === 'XFER', value: '7000200037' },
     { id: 'amt', label: 'Amount (USD / tdUSD)', type: 'text', value: '500.00', inputmode: 'decimal' }
@@ -769,7 +768,6 @@ SC.push({
     }
     if (act !== 'XFER') f.same = false;
     f.err = f.badamt || f.frz || f.nsf || f.lowtok || f.same;
-    const bdaNew = act === 'MINT' ? S.bda.ledger + A : act === 'BURN' ? S.bda.ledger - A : S.bda.ledger;
     const sup = act === 'MINT' ? supply() + A : act === 'BURN' ? supply() - A : supply();
     const tx = '0x' + hex(32), ref = 'TDN' + ymd(now()).slice(2) + lpad(nextSeq(), 6, '0');
     const call = act === 'MINT' ? `mint(${(c.wallet || newWallet).slice(0, 10)}…, ${plain(A)})` : act === 'BURN' ? `burn(${c.wallet.slice(0, 10)}…, ${plain(A)})` : `transfer(${c.wallet.slice(0, 10)}… → ${c2.wallet.slice(0, 10)}…, ${plain(A)})`;
@@ -778,13 +776,13 @@ SC.push({
       f, msg, errmsg, action: act, actionl: act.toLowerCase(), acct: v.acct, cdaTo: v.cdaTo || '', amt: plain(A), amtc: fmt(A),
       dda: c.dda || v.acct, ddabal: plain(d.ledger), availc: fmt(avail(d)), ddanew: plain(act === 'MINT' ? d.ledger - A : d.ledger + A),
       cdaacct, cdabal: plain(c.tokens), cdanew: plain(act === 'MINT' ? c.tokens + A : c.tokens - A), cda2bal: c2 ? plain(c2.tokens) : '', cda2new: c2 ? plain(c2.tokens + A) : '',
-      bdabal: plain(S.bda.ledger), bdanew: plain(bdaNew), bdanewc: fmt(bdaNew), supply: plain(sup), supplyc: fmt(sup),
+      supply: plain(sup), supplyc: fmt(sup),
       wallet: (c.wallet || newWallet), wallet2: c2 ? c2.wallet : '', tx, txs: tx.slice(0, 14) + '…' + tx.slice(-6), ref, call, block: S.block + 1,
       result: f.err ? { ok: false, title: 'Rejected by TDNXF300', msg } : { ok: true, title: { MINT: 'Tokens minted', BURN: 'Tokens redeemed', XFER: 'Tokens moved on the network' }[act], msg: `${msg} · tx ${tx.slice(0, 12)}…` },
       apply() {
         const touched = [];
-        if (act === 'MINT') { if (!S.cda[cdaacct]) S.cda[cdaacct] = { name: d.name, dda: v.acct, tokens: 0, wallet: newWallet }; d.ledger = r2(d.ledger - A); S.bda.ledger = r2(S.bda.ledger + A); S.cda[cdaacct].tokens = r2(S.cda[cdaacct].tokens + A); touched.push(v.acct, cdaacct, S.bda.acct); }
-        if (act === 'BURN') { c.tokens = r2(c.tokens - A); S.bda.ledger = r2(S.bda.ledger - A); d.ledger = r2(d.ledger + A); touched.push(c.dda, cdaacct, S.bda.acct); }
+        if (act === 'MINT') { if (!S.cda[cdaacct]) S.cda[cdaacct] = { name: d.name, dda: v.acct, tokens: 0, wallet: newWallet }; d.ledger = r2(d.ledger - A); S.cda[cdaacct].tokens = r2(S.cda[cdaacct].tokens + A); touched.push(v.acct, cdaacct); }
+        if (act === 'BURN') { c.tokens = r2(c.tokens - A); d.ledger = r2(d.ledger + A); touched.push(c.dda, cdaacct); }
         if (act === 'XFER') { c.tokens = r2(c.tokens - A); c2.tokens = r2(c2.tokens + A); touched.push(v.acct, v.cdaTo); }
         S.seq += 1; S.block += 1;
         S.journal.unshift({ ts: hms(now()), tran: 'ITK1', acct: act === 'XFER' ? `${v.acct}→${v.cdaTo}` : cdaacct, desc: `${act} tdUSD · tx ${tx.slice(0, 10)}…`, amt: act === 'BURN' ? -A : A });
@@ -804,7 +802,7 @@ SC.push({
       if (v.action === 'XFER') lines.push(` DEST CDA ...: <span class="u">${v.cdaTo}</span>   TOKENS ${lpad(c.cda2bal, 12)}`);
       else lines.push(` REDEEM TO ..: DDA ${c.dda}`);
     }
-    lines.push(` BDA ........: ${S.bda.acct}   RESERVE ${lpad(fmt(S.bda.ledger), 13)}   SUPPLY ${lpad(fmt(supply()), 13)}`);
+    lines.push(` TDN SUPPLY .: ${lpad(fmt(supply()), 14)} tdUSD   (= SUM OF ALL CDAs ON HOGAN)`);
     lines.push(` AMOUNT .....: <span class="u">${esc(lpad(v.amt || '', 14, '_'))}</span>   tdUSD (1 TOKEN = 1.00 USD)`);
     lines.push(` WALLET .....: ${esc(c.wallet || '')}`);
     lines.push('');
@@ -816,8 +814,8 @@ SC.push({
     B('0000-MAINLINE · RECEIVE MAP', 'COBOL', 1, 'CICS · TDNXF300', `
       *-----------------------------------------------------------*
       * TDNXF300  TOKENIZED DEPOSIT MOVEMENT     CICS TRAN ITK1     *
-      *   MINT : DDA --> BDA (reserve) --> tokens issued to CDA     *
-      *   BURN : CDA tokens burned --> BDA --> DDA                  *
+      *   MINT : DDA --> CDA, tokens issued to the CDA wallet       *
+      *   BURN : CDA tokens burned --> DDA credited                 *
       *   XFER : CDA --> CDA on the network, no cash moves          *
       *-----------------------------------------------------------*
        0000-MAINLINE.
@@ -835,7 +833,7 @@ SC.push({
               PERFORM 5000-CONFIRM-AND-RECON                          ⟦unless=err⟧
            END-IF
            PERFORM 9000-SEND-RESPONSE.`),
-    B('COPY TDNCDAR / TDNBDAR · token ledgers', 'COBOL', 2, 'copybooks', `
+    B('COPY TDNCDAR · custody deposit account', 'COBOL', 2, 'copybook', `
       * Custody Deposit Account - the customer's tokenized position
        01  CDA-MASTER-REC.
            05  CDA-ACCT-NO             PIC 9(10).
@@ -843,12 +841,8 @@ SC.push({
            05  CDA-WALLET-ADDR         PIC X(42).
            05  CDA-TOKEN-BAL           PIC S9(13)V99 COMP-3.
            05  CDA-PENDING-AMT         PIC S9(13)V99 COMP-3.
-           05  CDA-LAST-TX-HASH        PIC X(66).
-      * Bank Deposit Account - omnibus reserve behind every token
-       01  BDA-MASTER-REC.
-           05  BDA-ACCT-NO             PIC 9(10).
-           05  BDA-LEDGER-BAL          PIC S9(13)V99 COMP-3.`, { decl: true }),
-    B('1000-READ-POSITIONS', 'COBOL', 2, 'DDA · CDA · BDA reads', `
+           05  CDA-LAST-TX-HASH        PIC X(66).`, { decl: true }),
+    B('1000-READ-POSITIONS', 'COBOL', 2, 'DDA · CDA reads', `
        1000-READ-POSITIONS.
            IF WS-TDN-ACTION = 'MINT'
               MOVE WS-SRC-ACCT TO DDA-ACCT-NO                         ⟦if=a_MINT⟧
@@ -874,10 +868,6 @@ SC.push({
                  EXEC CICS READ FILE('TDNCDAM') INTO(DST-CDA-REC)    ⟦if=a_XFER⟧
                       RIDFLD(WS-DST-CDA) UPDATE END-EXEC              ⟦if=a_XFER; set=DST-CDA-TOKEN-BAL^{{cda2bal}}⟧
               END-IF                                                  ⟦unless=a_MINT⟧
-           END-IF
-           IF WS-TDN-ACTION NOT = 'XFER'
-              EXEC CICS READ FILE('TDNBDAM') INTO(BDA-MASTER-REC)    ⟦unless=a_XFER⟧
-                   RIDFLD(BDA-ACCT-NO) UPDATE END-EXEC                ⟦unless=a_XFER; set=BDA-LEDGER-BAL^{{bdabal}}⟧
            END-IF.`),
     B('2000-VALIDATE', 'COBOL', 1, 'funds and token checks', `
        2000-VALIDATE.
@@ -909,8 +899,7 @@ SC.push({
            EVALUATE WS-TDN-ACTION
              WHEN 'MINT'                                              ⟦if=a_MINT⟧
                SUBTRACT WS-TDN-AMT FROM DDA-LEDGER-BAL                ⟦if=a_MINT; set=DDA-LEDGER-BAL^{{ddanew}}; log=IDS0427I DR DDA {{acct}} {{amtc}}⟧
-               ADD      WS-TDN-AMT TO   BDA-LEDGER-BAL                ⟦if=a_MINT; set=BDA-LEDGER-BAL^{{bdanew}}; log=TDN3001I CR BDA 9000000001 {{amtc}} TOKEN RESERVE⟧
-               MOVE     WS-TDN-AMT TO   CDA-PENDING-AMT               ⟦if=a_MINT; set=CDA-PENDING-AMT^{{amt}}⟧
+               MOVE     WS-TDN-AMT TO   CDA-PENDING-AMT               ⟦if=a_MINT; set=CDA-PENDING-AMT^{{amt}}; log=TDN3001I CDA {{cdaacct}} CREDIT PENDING {{amtc}}⟧
              WHEN 'BURN'                                              ⟦if=a_BURN⟧
       *        Tokens leave first; cash is released after the burn
                SUBTRACT WS-TDN-AMT FROM CDA-TOKEN-BAL                 ⟦if=a_BURN; set=CDA-TOKEN-BAL^{{cdanew}}⟧
@@ -945,25 +934,25 @@ SC.push({
 --> receipt
 { "status": "0x1", "blockNumber": {{block}},
   "txHash": "{{txs}}", "finality": "instant (BFT)" }`, { unless: 'err', decl: true, declLog: 'TDN4500I {{call}} -> BLOCK {{block}}' }),
-    B('5000-CONFIRM-AND-RECON', 'COBOL', 4, 'settle + reserve check', `
+    B('5000-CONFIRM-AND-RECON', 'COBOL', 4, 'settle + ledger check', `
        5000-CONFIRM-AND-RECON.
            EVALUATE WS-TDN-ACTION
              WHEN 'MINT'                                              ⟦if=a_MINT⟧
                ADD CDA-PENDING-AMT TO CDA-TOKEN-BAL                   ⟦if=a_MINT; set=CDA-TOKEN-BAL^{{cdanew}}; log=TDN5000I CDA {{cdaacct}} +{{amtc}} tdUSD⟧
              WHEN 'BURN'                                              ⟦if=a_BURN⟧
-               SUBTRACT WS-TDN-AMT FROM BDA-LEDGER-BAL                ⟦if=a_BURN; set=BDA-LEDGER-BAL^{{bdanew}}; log=TDN5001I DR BDA 9000000001 {{amtc}}⟧
                ADD      WS-TDN-AMT TO   DDA-LEDGER-BAL                ⟦if=a_BURN; set=DDA-LEDGER-BAL^{{ddanew}}; log=IDS0527I CR DDA {{dda}} {{amtc}}⟧
              WHEN 'XFER'                                              ⟦if=a_XFER⟧
                ADD WS-TDN-AMT TO DST-CDA-TOKEN-BAL                    ⟦if=a_XFER; set=DST-CDA-TOKEN-BAL^{{cda2new}}; log=TDN5002I CDA {{cdaTo}} +{{amtc}} tdUSD⟧
            END-EVALUATE
            MOVE ZERO       TO CDA-PENDING-AMT                         ⟦set=CDA-PENDING-AMT^0.00⟧
            MOVE WS-TX-HASH TO CDA-LAST-TX-HASH
-      *    Reserve rule: BDA balance must equal tdUSD in circulation
+      *    Ledger rule: all Hogan CDAs must equal tdUSD on the network
+           CALL 'TDNCDATL' USING WS-CDA-TOTAL                         ⟦set=WS-CDA-TOTAL^{{supply}}⟧
            CALL 'TDNSUPLY' USING WS-TOTAL-SUPPLY                      ⟦set=WS-TOTAL-SUPPLY^{{supply}}⟧
-           IF BDA-LEDGER-BAL NOT = WS-TOTAL-SUPPLY
+           IF WS-CDA-TOTAL NOT = WS-TOTAL-SUPPLY
               EXEC CICS WRITEQ TD QUEUE('RECN') FROM(RECON-ALERT)    ⟦if=never⟧
                    END-EXEC                                           ⟦if=never⟧
-           END-IF                                                     ⟦log=TDN5100I RESERVE OK - BDA {{bdanewc}} = SUPPLY {{supplyc}}⟧`, { unless: 'err' }),
+           END-IF                                                     ⟦log=TDN5100I LEDGER OK - CDA TOTAL {{supplyc}} = SUPPLY {{supplyc}}⟧`, { unless: 'err' }),
     B('9000-SEND-RESPONSE', 'COBOL', 4, 'commit or roll back', `
        9000-SEND-RESPONSE.
            IF WS-ERROR-FOUND
@@ -1272,11 +1261,10 @@ function renderLedger(touched = []) {
   for (const [k, a] of Object.entries(S.dda)) h += `<tr class="${T.has(k) ? 'flash' : ''}"><td class="mono">${k}</td><td>${esc(a.name)}</td><td><span class="ag-badge ${a.status === 'A' ? 'ag-badge--gray' : 'ag-badge--bad'}" title="${STAT[a.status]}">${a.status}</span></td><td class="n">${fmt(a.ledger)}</td><td class="n">${fmt(avail(a))}</td></tr>`;
   h += '</tbody></table></div>';
   h += '<div class="subhead">Tokenized deposit network</div><div class="tablewrap"><table class="ag-table"><thead><tr><th>Account</th><th>Holder</th><th>Wallet</th><th class="n">Balance</th></tr></thead><tbody>';
-  h += `<tr class="${T.has(S.bda.acct) ? 'flash' : ''}"><td class="mono">${S.bda.acct} <span class="ag-badge ag-badge--dark">BDA</span></td><td>${esc(S.bda.name)}</td><td class="mono">—</td><td class="n">${fmt(S.bda.ledger)} USD</td></tr>`;
   for (const [k, c] of Object.entries(S.cda)) h += `<tr class="${T.has(k) ? 'flash' : ''}"><td class="mono">${k} <span class="ag-badge ag-badge--orange">CDA</span></td><td>${esc(c.name)}</td><td class="mono" title="${c.wallet}">${c.wallet.slice(0, 6)}…${c.wallet.slice(-4)}</td><td class="n">${fmt(c.tokens)} tdUSD</td></tr>`;
   h += '</tbody></table></div>';
-  const sup = supply(), ok = Math.abs(sup - S.bda.ledger) < 0.005;
-  h += `<div class="recon">Reserve check: BDA <b>${fmt(S.bda.ledger)}</b> ${ok ? '=' : '≠'} tdUSD supply <b>${fmt(sup)}</b> <span class="ag-badge ${ok ? 'ag-badge--ok' : 'ag-badge--bad'}">${ok ? 'Fully backed' : 'Out of balance'}</span></div>`;
+  const sup = supply(), cdaTot = r2(Object.values(S.cda).reduce((t, c) => t + c.tokens, 0)), ok = Math.abs(sup - cdaTot) < 0.005;
+  h += `<div class="recon">Ledger check: Hogan CDA total <b>${fmt(cdaTot)}</b> ${ok ? '=' : '≠'} tdUSD on the network <b>${fmt(sup)}</b> <span class="ag-badge ${ok ? 'ag-badge--ok' : 'ag-badge--bad'}">${ok ? 'In balance' : 'Out of balance'}</span></div>`;
   h += '<div class="subhead">Journal (this session)</div>';
   if (!S.journal.length) h += '<div class="hint">Nothing posted yet. Run a scenario.</div>';
   else { h += '<div class="tablewrap"><table class="ag-table"><thead><tr><th>Time</th><th>Tran</th><th>Account</th><th>What</th><th class="n">Amount</th></tr></thead><tbody>'; S.journal.slice(0, 12).forEach(j => { h += `<tr><td class="mono">${j.ts}</td><td class="mono">${j.tran}</td><td class="mono">${esc(j.acct)}</td><td>${esc(j.desc)}</td><td class="n">${j.amt == null ? '—' : fmt(j.amt)}</td></tr>`; }); h += '</tbody></table></div>'; }

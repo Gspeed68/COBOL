@@ -87,10 +87,10 @@ Open `hogan-console/index.html` in any browser. It needs no build step and no se
 |---|---|---|
 | DDA Maintenance | `IDM1` / `IDSDM100` | Status, overdraft limit, statement address or hold changes on the IDS DDA master: READ UPDATE, edits, REWRITE, audit TD queue, CIF memo, SYNCPOINT or ROLLBACK |
 | DDA → DDA Transfer | `IXF1` / `IDSXF200` | Ordered record locks (no deadlocks), available balance + overdraft check, debit and credit in one unit of work, journal entries, and the `IDSNITE` JCL that hard-posts them tonight |
-| Tokenized Network | `ITK1` / `TDNXF300` | MINT (DDA → BDA → CDA tokens), BURN (CDA → BDA → DDA) and XFER (CDA → CDA) with MQ calls to a TDN gateway, the token contract call, and a reserve check that BDA = tdUSD supply |
+| Tokenized Network | `ITK1` / `TDNXF300` | MINT (DDA → CDA, tokens issued), BURN (CDA → DDA, tokens retired) and XFER (CDA → CDA) with MQ calls to a TDN gateway, the token contract call, and a ledger check that the Hogan CDA total = tdUSD supply |
 | Orchestrator + APIM | `PAYPOST1` | A third party calls Azure API Management (validate-jwt, rate limit), the payments orchestrator screens and routes, Hogan debits over MQ, then pacs.008 (RTP / FedNow / Wire) or a NACHA entry (ACH) goes to the rail |
 
-**Glossary:** DDA = demand deposit account. BDA = Bank Deposit Account, the bank's omnibus reserve that backs every token. CDA = Custody Deposit Account, the customer's tokenized position.
+**Glossary:** DDA = demand deposit account (checking). CDA = Custody Deposit Account, the customer's tokenized position. Money moves directly DDA ↔ CDA.
 
 Things to try: anything on Jordan Patel (frozen), closing an account with money in it, a transfer bigger than available + overdraft, minting with no CDA (it onboards one), an expired OAuth token, a creditor named "Acme Shell Co" (sanctions hold), or more than $25,000 on an instant rail.
 
@@ -102,7 +102,7 @@ Balances persist in the browser (localStorage). **Reset demo data** puts them ba
 
 An animated system diagram that follows one tokenized deposit request end to end:
 
-client → **Azure APIM** (mTLS, validate-jwt, rate limit, JSON schema) → **payments orchestrator** (saga) → **AML / BSA / fraud** in parallel → **z/OS Connect** → **Hogan CICS TDNXF300** → **DDA · BDA · CDA** → **tokenized deposit network** (MQ → tdUSD contract) → 201 to the client → **Oracle Fusion Cloud GL** (FBDI journal import) → **settlement** (book transfer, on-ledger, or Fedwire pacs.009 for interbank) → **three-way reconciliation** (network = Hogan BDA = GL 210500) → **Treasury Center**.
+client → **Azure APIM** (mTLS, validate-jwt, rate limit, JSON schema) → **payments orchestrator** (saga) → **AML / BSA / fraud** in parallel → **z/OS Connect** → **Hogan CICS TDNXF300** → **DDA ↔ CDA** → **tokenized deposit network** (MQ → tdUSD contract) → 201 to the client → **Oracle Fusion Cloud GL** (FBDI journal import) → **settlement** (book transfer, on-ledger, or Fedwire pacs.009 for interbank) → **three-way reconciliation** (network = Hogan CDA total = GL 210500) → **Treasury Center**.
 
 - Actions: mint, burn, and transfer (on-us, or interbank to Participant B).
 - Scenarios: clean, AML alert, sanctions potential match, fraud review, KYC refresh, or GL import delayed (creates a recon break).

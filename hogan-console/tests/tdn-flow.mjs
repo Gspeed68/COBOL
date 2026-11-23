@@ -36,10 +36,10 @@ console.log('release', aml, '→', await p.evaluate(() => document.querySelector
 await p.evaluate(id => document.querySelector(`[data-rej="${id}"]`).click(), frd);
 const before = await p.evaluate(() => document.querySelectorAll('[data-post]').length);
 await p.evaluate(() => document.querySelector('[data-post]').click());
-const st = await p.evaluate(() => { const S = window.__tdn.S; const sup = Object.values(S.cust).reduce((t, c) => t + c.tokens, 0); return { sup: Math.round(sup * 100) / 100, bda: S.bda, gl: S.gl, txns: S.txns.map(t => t.id + ' ' + t.status).slice(0, 14), breaksBefore: 0, breaksAfter: document.querySelectorAll('[data-post]').length, kpis: [...document.querySelectorAll('.kpi')].map(k => k.innerText.replace(/\n/g, ' ')) }; });
+const st = await p.evaluate(() => { const S = window.__tdn.S; const sup = Object.values(S.cust).reduce((t, c) => t + c.tokens, 0); return { sup: Math.round(sup * 100) / 100, cdaTotal: S.cdaTotal, gl: S.gl, txns: S.txns.map(t => t.id + ' ' + t.status).slice(0, 14), breaksBefore: 0, breaksAfter: document.querySelectorAll('[data-post]').length, kpis: [...document.querySelectorAll('.kpi')].map(k => k.innerText.replace(/\n/g, ' ')) }; });
 st.breaksBefore = before;
 console.log(JSON.stringify(st, null, 1));
-const ok = Math.abs(st.sup - st.bda) < .01 && Math.abs(st.sup - st.gl['210500']) < .01;
+const ok = Math.abs(st.sup - st.cdaTotal) < .01 && Math.abs(st.sup - st.gl['210500']) < .01;
 console.log('RECONCILED', ok, 'ERRORS', errs);
 await b.close();
 if (!ok || errs.length) process.exit(1);
