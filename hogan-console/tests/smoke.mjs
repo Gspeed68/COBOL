@@ -44,7 +44,7 @@ for (const [sc, v] of cases) {
   const r = await p.evaluate(() => ({ res: document.querySelector('#result').innerText.replace(/\n/g,' | '), lines: document.querySelectorAll('.ln.done').length, last: [...document.querySelectorAll('#console div')].slice(-1)[0]?.innerText }));
   console.log(sc.padEnd(6), JSON.stringify(v).slice(0,70).padEnd(72), '→', r.res, `(${r.lines} lines)`);
 }
-const st = await p.evaluate(() => { const S = window.__hogan.S; return { dda: Object.fromEntries(Object.entries(S.dda).map(([k,a])=>[k,[a.ledger,a.holds,a.status]])), bda: S.bda.ledger, cda: Object.fromEntries(Object.entries(S.cda).map(([k,c])=>[k,c.tokens])) }; });
+const st = await p.evaluate(() => { const S = window.__hogan.S; return { dda: Object.fromEntries(Object.entries(S.dda).map(([k,a])=>[k,[a.ledger,a.holds,a.status]])), cda: Object.fromEntries(Object.entries(S.cda).map(([k,c])=>[k,c.tokens])) }; });
 console.log(JSON.stringify(st));
 console.log('ERRORS', errs);
 await b.close();
