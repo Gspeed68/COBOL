@@ -1,0 +1,1449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#2A2A2A" />
+<title>Hogan Core Console — AriesGate Tech</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='10' fill='%232A2A2A'/%3E%3Cpath d='M12 50 32 12 52 50Z' fill='%23E8520A'/%3E%3Ctext x='32' y='47' font-family='monospace' font-size='16' font-weight='700' fill='%23fff' text-anchor='middle'%3E&gt;_%3C/text%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --ag-orange:#E8520A; --ag-orange-dark:#C04008; --ag-orange-light:#FFF0E8;
+  --ag-dark:#2A2A2A; --ag-gray-dark:#404040; --ag-gray:#666666; --ag-gray-mid:#AAAAAA;
+  --ag-gray-light:#F2F2F2; --ag-white:#FFFFFF; --ag-text:#1A1A1A;
+  --font-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --font-body:"Barlow",Arial,sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --space-xs:.25rem; --space-sm:.5rem; --space-md:1rem; --space-lg:1.75rem; --space-xl:3rem;
+  --header-h:64px; --radius:4px; --shadow:0 2px 8px rgba(0,0,0,.14);
+  --ok:#2E9E5B; --bad:#D23C2B; --warn:#C98A00;
+  --code-bg:#1C1C1C; --code-fg:#E4E4E4; --code-gutter:#6E6E6E;
+  --phosphor:#39FF6A;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:var(--font-body);color:var(--ag-text);background:var(--ag-gray-light);display:flex;flex-direction:column;min-height:100vh;-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit}
+.ag-header,.tabs,.ag-footer{flex-shrink:0}
+
+/* ── Splash ── */
+.splash{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .45s ease;cursor:pointer}
+.splash.hide{opacity:0;pointer-events:none}
+#agSplash{background:var(--ag-dark)}
+#agSplash img{width:min(260px,58vw);height:auto;background:#F2F2F2;border-radius:50%;padding:18px;box-shadow:0 8px 28px rgba(0,0,0,.45)}
+.splash__bar{width:min(260px,60vw);height:4px;background:#555;border-radius:2px;margin-top:28px;overflow:hidden}
+.splash__bar i{display:block;height:100%;width:0;background:var(--ag-orange);animation:load 1.5s ease forwards}
+@keyframes load{to{width:100%}}
+.splash__tag{margin-top:14px;color:var(--ag-gray-mid);font-family:var(--font-display);letter-spacing:.2em;font-size:.85rem;text-transform:uppercase}
+#appSplash{background:#050a06;color:var(--phosphor);font-family:var(--font-mono)}
+#appSplash .term{border:1px solid #1d4d29;padding:28px 34px;max-width:min(620px,90vw);box-shadow:0 0 40px rgba(57,255,106,.12) inset}
+#appSplash h1{font-family:var(--font-display);font-size:clamp(2.2rem,7vw,3.8rem);letter-spacing:.06em;margin:0;color:#fff;line-height:1}
+#appSplash h1 span{color:var(--ag-orange)}
+#appSplash .sub{margin:.8rem 0 1.2rem;color:#9fe6b0;font-size:.85rem;letter-spacing:.08em}
+#appSplash pre{margin:0;font-size:.78rem;line-height:1.55;white-space:pre-wrap}
+.blink{animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+
+/* ── Header ── */
+.ag-header{background:var(--ag-gray-dark);color:#fff;display:flex;align-items:center;gap:var(--space-md);padding:0 var(--space-lg);min-height:var(--header-h);flex-wrap:wrap}
+.ag-header__logo{height:48px;width:48px;background:#F2F2F2;border-radius:8px;padding:2px}
+.ag-header__divider{width:1px;height:34px;background:var(--ag-gray-mid);opacity:.6}
+.ag-header__title{font-family:var(--font-display);font-size:1.45rem;letter-spacing:.04em;line-height:1.1}
+.ag-header__subtitle{font-size:.82rem;color:var(--ag-gray-mid)}
+.ag-header__right{margin-left:auto;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+.pill{font-family:var(--font-display);font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;border:1px solid #6a6a6a;border-radius:20px;padding:.2rem .7rem;color:#ddd}
+.pill b{color:var(--ag-orange)}
+
+/* ── Tabs ── */
+.tabs{display:flex;gap:2px;background:var(--ag-dark);padding:0 var(--space-lg);overflow-x:auto;scrollbar-width:none}
+.tab{background:none;border:0;color:#bbb;font-family:var(--font-display);font-size:1rem;letter-spacing:.05em;text-transform:uppercase;padding:.75rem 1rem;cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap}
+.tab small{display:block;font-family:var(--font-mono);font-size:.65rem;letter-spacing:.04em;color:#888;text-transform:none}
+.tab.active{color:#fff;border-bottom-color:var(--ag-orange)}
+.tab:hover{color:#fff}
+.tab:focus-visible{outline:2px solid var(--ag-orange);outline-offset:-2px}
+
+/* ── Layout ── */
+.ag-main{flex:1;padding:var(--space-md) var(--space-lg) var(--space-lg)}
+.split{display:grid;grid-template-columns:minmax(330px,5fr) minmax(0,7fr);gap:var(--space-md);align-items:start}
+@media (max-width:980px){.split{grid-template-columns:1fr}}
+.col{display:flex;flex-direction:column;gap:var(--space-md);min-width:0}
+
+.ag-card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.ag-section-bar{background:var(--ag-orange);color:#fff;font-family:var(--font-display);font-size:1rem;letter-spacing:.08em;text-transform:uppercase;padding:.5rem var(--space-md);display:flex;align-items:center;gap:.6rem}
+.ag-section-bar--dark{background:var(--ag-gray-dark)}
+.ag-section-bar .r{margin-left:auto;font-family:var(--font-mono);font-size:.72rem;letter-spacing:0;text-transform:none;opacity:.85}
+.ag-card__body{padding:var(--space-md);padding-top:calc(var(--space-md) + .12rem)}
+.blurb{font-size:.92rem;color:var(--ag-gray);margin:0 0 var(--space-md);line-height:1.45}
+.blurb b{color:var(--ag-text)}
+
+.ag-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:.7rem .9rem}
+.ag-form-group{display:flex;flex-direction:column;gap:.25rem;min-width:0}
+.ag-form-group.full{grid-column:1/-1}
+.ag-form-group.hidden{display:none}
+@media (max-width:520px){.ag-form-grid{grid-template-columns:1fr}}
+.ag-label{font-family:var(--font-display);font-size:.8rem;letter-spacing:.07em;text-transform:uppercase;color:var(--ag-gray)}
+.ag-input,.ag-select{border:1px solid #cfcfcf;border-radius:var(--radius);padding:.55rem .65rem;background:#fff;color:var(--ag-text);min-height:42px;width:100%}
+.ag-input:focus,.ag-select:focus{outline:none;border-color:var(--ag-orange);box-shadow:0 0 0 3px rgba(232,82,10,.18)}
+.hint{font-size:.76rem;color:var(--ag-gray)}
+.ag-checkbox-label{display:flex;align-items:center;gap:.5rem;font-size:.9rem;min-height:42px}
+.ag-checkbox-label input{width:20px;height:20px;accent-color:var(--ag-orange)}
+
+.controls{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin-top:var(--space-md)}
+.ag-btn{font-family:var(--font-display);letter-spacing:.07em;text-transform:uppercase;font-size:.95rem;border-radius:var(--radius);padding:.55rem 1.1rem;min-height:42px;cursor:pointer;border:2px solid transparent}
+.ag-btn--primary{background:var(--ag-orange);color:#fff}
+.ag-btn--primary:hover{background:var(--ag-orange-dark)}
+.ag-btn--outline{background:#fff;color:var(--ag-gray-dark);border-color:var(--ag-gray-dark)}
+.ag-btn--outline:hover{background:var(--ag-gray-light)}
+.ag-btn--dark{background:var(--ag-gray-dark);color:#fff}
+.ag-btn:disabled{opacity:.45;cursor:not-allowed}
+.ag-btn:focus-visible{box-shadow:0 0 0 3px rgba(232,82,10,.35);outline:none}
+.speed{display:flex;align-items:center;gap:.4rem;font-size:.82rem;color:var(--ag-gray);margin-left:auto}
+.speed select{min-height:36px;padding:.3rem .4rem}
+
+.result{margin-top:var(--space-md);border-radius:var(--radius);padding:.7rem .9rem;font-size:.9rem;display:none;border-left:5px solid}
+.result.show{display:block}
+.result.ok{background:#EAF7EF;border-color:var(--ok)}
+.result.bad{background:#FDECEA;border-color:var(--bad)}
+.result.warn{background:#FFF6E0;border-color:var(--warn)}
+.result b{font-family:var(--font-display);letter-spacing:.05em;font-size:1rem}
+.result code{font-family:var(--font-mono);font-size:.8rem}
+
+/* 3270 */
+.screen3270{background:#050a06;color:var(--phosphor);font-family:var(--font-mono);font-size:11px;line-height:1.45;padding:.7rem .8rem;margin:0;overflow-x:auto;white-space:pre;border-radius:var(--radius);text-shadow:0 0 4px rgba(57,255,106,.35)}
+.screen3270 .h{color:#fff}
+.screen3270 .u{color:#ffd84d;text-decoration:underline}
+.screen3270 .e{color:#ff6a5a}
+
+/* flow */
+.flow{display:flex;align-items:stretch;gap:0;overflow-x:auto;padding:.2rem 0 .3rem}
+.node{flex:1 1 0;min-width:86px;border:2px solid #d6d6d6;border-radius:6px;padding:.45rem .4rem;text-align:center;font-family:var(--font-display);font-size:.82rem;letter-spacing:.04em;text-transform:uppercase;color:var(--ag-gray);background:#fff;transition:all .25s}
+.node small{display:block;font-family:var(--font-body);text-transform:none;letter-spacing:0;font-size:.7rem;color:var(--ag-gray-mid)}
+.arrow{align-self:center;width:18px;min-width:18px;height:2px;background:#d0d0d0;position:relative}
+.arrow::after{content:"";position:absolute;right:-1px;top:-4px;border:5px solid transparent;border-left-color:#d0d0d0}
+.node.visited{border-color:var(--ag-gray-mid);color:var(--ag-text);background:var(--ag-gray-light)}
+.node.active{border-color:var(--ag-orange);color:#fff;background:var(--ag-orange);box-shadow:0 0 0 4px rgba(232,82,10,.18)}
+.node.active small{color:#ffe0d0}
+.node.failed{border-color:var(--bad);background:#FDECEA;color:var(--bad)}
+
+/* ledger */
+.ag-table{width:100%;border-collapse:collapse;font-size:.85rem}
+.ag-table th{background:var(--ag-gray-dark);color:#fff;font-family:var(--font-display);letter-spacing:.06em;text-transform:uppercase;font-weight:600;font-size:.76rem;text-align:left;padding:.4rem .5rem}
+.ag-table td{padding:.42rem .5rem;border-bottom:1px solid #eee;vertical-align:top}
+.ag-table td.n{text-align:right;font-family:var(--font-mono);font-size:.8rem;white-space:nowrap}
+.ag-table th.n{text-align:right}
+.ag-table tr.flash td{animation:flash 1.6s ease}
+@keyframes flash{0%{background:#FFE0CC}100%{background:transparent}}
+.mono{font-family:var(--font-mono);font-size:.78rem}
+.ag-badge{display:inline-block;font-family:var(--font-display);font-size:.7rem;letter-spacing:.07em;text-transform:uppercase;padding:.08rem .45rem;border-radius:3px}
+.ag-badge--orange{background:var(--ag-orange);color:#fff}
+.ag-badge--gray{background:#ddd;color:#333}
+.ag-badge--dark{background:var(--ag-gray-dark);color:#fff}
+.ag-badge--ok{background:var(--ok);color:#fff}
+.ag-badge--bad{background:var(--bad);color:#fff}
+.subhead{font-family:var(--font-display);text-transform:uppercase;letter-spacing:.07em;font-size:.85rem;color:var(--ag-gray);margin:.9rem 0 .35rem}
+.subhead:first-child{margin-top:0}
+.recon{font-size:.82rem;margin-top:.5rem;padding:.45rem .6rem;background:var(--ag-gray-light);border-radius:var(--radius)}
+.tablewrap{overflow-x:auto}
+
+/* ── Code panel ── */
+.codecard{background:var(--code-bg);color:var(--code-fg);border-radius:var(--radius);box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;position:sticky;top:10px;height:calc(100vh - 20px);max-height:1100px}
+@media (max-width:980px){.codecard{position:relative;top:0;max-height:none}}
+.codehead{background:var(--ag-dark);border-bottom:3px solid var(--ag-orange);padding:.55rem .9rem;display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
+.codehead .t{font-family:var(--font-display);text-transform:uppercase;letter-spacing:.08em;font-size:1rem}
+.codehead .meta{margin-left:auto;font-family:var(--font-mono);font-size:.72rem;color:#aaa}
+.progress{height:3px;background:#333}
+.progress i{display:block;height:100%;width:0;background:var(--ag-orange);transition:width .15s}
+.codescroll{overflow:auto;flex:1;min-height:200px;padding:.5rem 0 1rem;scroll-behavior:smooth}
+@media (max-width:980px){.codescroll{max-height:70vh}}
+.blk{margin:0 .6rem .8rem;border:1px solid #2f2f2f;border-radius:5px;overflow:hidden}
+.blk.skipped{opacity:.38}
+.blk.activeb{border-color:#7a3a17}
+.blkhead{display:flex;align-items:center;gap:.5rem;background:#262626;padding:.35rem .6rem;font-size:.78rem}
+.blkhead .step{font-family:var(--font-display);background:#3a3a3a;color:#ddd;border-radius:3px;padding:0 .4rem;letter-spacing:.05em}
+.blk.activeb .blkhead .step{background:var(--ag-orange);color:#fff}
+.blkhead .name{font-family:var(--font-mono);color:#f0f0f0}
+.blkhead .lang{margin-left:auto;font-family:var(--font-display);letter-spacing:.08em;font-size:.7rem;color:#999;border:1px solid #444;border-radius:3px;padding:0 .35rem}
+.blkhead .where{font-size:.72rem;color:#9a9a9a}
+.lines{font-family:var(--font-mono);font-size:12px;line-height:1.55;padding:.25rem 0;overflow-x:auto}
+.ln{display:flex;white-space:pre;padding-right:.8rem;border-left:3px solid transparent;min-width:max-content}
+.ln .g{color:var(--code-gutter);width:5.2em;min-width:5.2em;text-align:right;padding-right:.9em;user-select:none}
+.ln .c{flex:1}
+.ln.done{background:rgba(46,158,91,.07)}
+.ln.done .g{color:#5bbd84}
+.ln.cur{background:rgba(232,82,10,.22);border-left-color:var(--ag-orange)}
+.ln.cur .g{color:#ffb38a}
+.ln.skip{opacity:.33}
+.blk.declcur .ln{background:rgba(232,82,10,.12)}
+.k{color:#FF9A5C}.s{color:#A8D88B}.cm{color:#7F8C7F;font-style:italic}.nu{color:#8FC7FF}.tg{color:#FF9A5C}.at{color:#E6C07B}.v{background:rgba(232,82,10,.28);color:#fff;border-radius:2px;padding:0 1px}
+
+.under{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #333;min-height:0}
+@media (max-width:640px){.under{grid-template-columns:1fr}}
+.panel{padding:.5rem .7rem;min-width:0}
+.panel + .panel{border-left:1px solid #333}
+@media (max-width:640px){.panel + .panel{border-left:0;border-top:1px solid #333}}
+.ptitle{font-family:var(--font-display);text-transform:uppercase;letter-spacing:.08em;font-size:.75rem;color:#aaa;margin-bottom:.3rem}
+.watch{font-family:var(--font-mono);font-size:11.5px;max-height:150px;overflow:auto}
+.watch div{display:flex;gap:.5rem;justify-content:space-between;padding:1px 0;border-bottom:1px dashed #2c2c2c}
+.watch div span:first-child{color:#c9c9c9}
+.watch div span:last-child{color:#ffd0b3;text-align:right;word-break:break-all}
+.watch div.new{animation:wnew 1.2s ease}
+@keyframes wnew{0%{background:rgba(232,82,10,.35)}100%{background:transparent}}
+.console{font-family:var(--font-mono);font-size:11.5px;color:#9fe6b0;max-height:150px;overflow:auto;white-space:pre-wrap;word-break:break-word}
+.console .e{color:#ff8676}.console .w{color:#ffd166}.console .ts{color:#5e7d66}
+.empty{color:#666;font-style:italic;font-family:var(--font-body);font-size:.8rem}
+
+.ag-footer{background:var(--ag-gray-dark);color:#ccc;padding:.9rem var(--space-lg);font-size:.78rem;display:flex;flex-wrap:wrap;gap:.4rem 1.2rem;align-items:center}
+.ag-footer__name{font-family:var(--font-display);letter-spacing:.08em;text-transform:uppercase;color:#fff;font-size:.95rem}
+.ag-footer p{margin:0;flex:1 1 420px;color:#bbb}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition:none!important;scroll-behavior:auto!important}}
+@media (max-width:640px){.ag-header__right,.ag-header__subtitle{display:none}.ag-header{padding:.5rem var(--space-md)}.ag-main{padding:var(--space-sm)}.tabs{padding:0 var(--space-sm)}}
+</style>
+</head>
+<body>
+
+<div id="agSplash" class="splash" role="presentation">
+  <img src="data:image/png;base64,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" alt="AriesGate Tech" />
+  <div class="splash__bar"><i></i></div>
+  <div class="splash__tag">AriesGate Tech</div>
+</div>
+<div id="appSplash" class="splash" role="presentation" style="display:none">
+  <div class="term">
+    <h1>HOGAN <span>CORE</span> CONSOLE</h1>
+    <div class="sub">COBOL · CICS · TOKENIZED DEPOSITS · APIM</div>
+<pre>DFHSI1517 AGDEMO  Control is being given to CICS.
+IDS0001I  INTEGRATED DEPOSIT SYSTEM ONLINE   REGION AGDCICS1
+CIF0001I  CUSTOMER INFORMATION FILE OPEN
+TDN0001I  TOKENIZED DEPOSIT GATEWAY CONNECTED
+APIM      GATEWAY READY  api.agdemobank.example
+<span class="blink">█</span></pre>
+  </div>
+</div>
+
+<header class="ag-header">
+  <img class="ag-header__logo" src="data:image/png;base64,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" alt="AriesGate Tech" />
+  <div class="ag-header__divider"></div>
+  <div>
+    <div class="ag-header__title">Hogan Core Console</div>
+    <div class="ag-header__subtitle">Type the request on the left · watch the COBOL that runs on the right</div>
+  </div>
+  <div class="ag-header__right">
+    <span class="pill">Bank <b>AriesGate Demo Bank</b></span>
+    <span class="pill">Region <b>AGDCICS1</b></span>
+    <span class="pill" id="clock">—</span>
+  </div>
+</header>
+
+<nav class="tabs" id="tabs" role="tablist" aria-label="Scenarios"></nav>
+
+<main class="ag-main">
+  <div class="split">
+    <div class="col">
+      <section class="ag-card">
+        <div class="ag-section-bar" id="formBar">Request<span class="r" id="formTran"></span></div>
+        <div class="ag-card__body">
+          <p class="blurb" id="blurb"></p>
+          <form id="form" class="ag-form-grid" autocomplete="off" onsubmit="return false"></form>
+          <div class="controls">
+            <button class="ag-btn ag-btn--primary" id="runBtn" type="button">▶ Submit (Enter)</button>
+            <button class="ag-btn ag-btn--outline" id="stepBtn" type="button">Step one line</button>
+            <button class="ag-btn ag-btn--outline" id="clearBtn" type="button">Clear trace</button>
+            <label class="speed">Speed
+              <select class="ag-select" id="speed">
+                <option value="420">Slow</option>
+                <option value="160" selected>Normal</option>
+                <option value="45">Fast</option>
+                <option value="0">Instant</option>
+              </select>
+            </label>
+          </div>
+          <div class="result" id="result" role="status" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section class="ag-card">
+        <div class="ag-section-bar ag-section-bar--dark"><span id="screenTitle">Teller screen (3270)</span><span class="r" id="screenMeta"></span></div>
+        <div class="ag-card__body">
+          <pre class="screen3270" id="screen" aria-label="3270 terminal preview"></pre>
+          <div class="subhead">Path through the bank</div>
+          <div class="flow" id="flow"></div>
+        </div>
+      </section>
+
+      <section class="ag-card">
+        <div class="ag-section-bar ag-section-bar--dark">Hogan positions<span class="r"><button class="ag-btn ag-btn--outline" id="resetBtn" type="button" style="min-height:28px;padding:.1rem .6rem;font-size:.75rem;background:transparent;color:#fff;border-color:#888">Reset demo data</button></span></div>
+        <div class="ag-card__body" id="ledger"></div>
+      </section>
+    </div>
+
+    <div class="col">
+      <section class="codecard" aria-label="Code that runs">
+        <div class="codehead">
+          <span class="t">Code that runs</span>
+          <span class="ag-badge ag-badge--orange" id="progName">—</span>
+          <span class="meta" id="codeMeta">waiting for Enter</span>
+        </div>
+        <div class="progress"><i id="prog"></i></div>
+        <div class="codescroll" id="codescroll"></div>
+        <div class="under">
+          <div class="panel"><div class="ptitle">Working-storage (watch)</div><div class="watch" id="watch"><span class="empty">Values appear as lines execute.</span></div></div>
+          <div class="panel"><div class="ptitle">CICS log / SYSOUT</div><div class="console" id="console"><span class="empty">No output yet.</span></div></div>
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
+
+<footer class="ag-footer">
+  <div class="ag-footer__name">AriesGate Tech</div>
+  <p>Teaching simulation. Hogan is a trademark of DXC Technology; this app is independent and not affiliated with DXC. Program names, transaction codes, record layouts, partners, people and the bank are made up for illustration. Nothing here connects to a real core, network or rail.</p>
+</footer>
+
+<script>
+(() => {
+'use strict';
+
+/* ════════════════ helpers ════════════════ */
+const $ = s => document.querySelector(s);
+const el = (tag, attrs = {}, html) => { const e = document.createElement(tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (html != null) e.innerHTML = html; return e; };
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const r2 = n => Math.round(n * 100) / 100;
+const fmt = n => (n < 0 ? '-' : '') + Math.abs(r2(n)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const plain = n => r2(n).toFixed(2);
+const num = s => { if (s == null) return NaN; const t = String(s).replace(/[$,\s]/g, ''); return t === '' || !/^-?\d*\.?\d+$/.test(t) ? NaN : parseFloat(t); };
+const pad = (s, n) => String(s).padEnd(n).slice(0, n);
+const lpad = (s, n, c = ' ') => String(s).padStart(n, c).slice(-n);
+const hex = n => { const a = new Uint8Array(n); (window.crypto || {}).getRandomValues ? crypto.getRandomValues(a) : a.forEach((_, i) => a[i] = Math.random() * 256 | 0); return Array.from(a, b => b.toString(16).padStart(2, '0')).join(''); };
+const now = () => new Date();
+const ymd = d => d.getFullYear() + lpad(d.getMonth() + 1, 2, '0') + lpad(d.getDate(), 2, '0');
+const hms = d => lpad(d.getHours(), 2, '0') + ':' + lpad(d.getMinutes(), 2, '0') + ':' + lpad(d.getSeconds(), 2, '0');
+const STAT = { A: 'Active', F: 'Frozen', D: 'Dormant', C: 'Closed' };
+
+/* ════════════════ demo data ════════════════ */
+const SEED = {
+  dda: {
+    '1000200011': { name: 'Dana Whitfield',      type: 'Personal checking', cif: 'C00012345', ledger: 12450.00, holds: 200,  od: 500,  status: 'A', addr: '88 Lakeview Dr, Columbus OH' },
+    '1000200029': { name: 'Marcus Lee',          type: 'Personal checking', cif: 'C00012377', ledger: 3215.40,  holds: 0,    od: 250,  status: 'A', addr: '1400 High St Apt 3, Columbus OH' },
+    '1000200037': { name: 'Rivera Hardware LLC', type: 'Business checking', cif: 'C00020911', ledger: 48900.00, holds: 1500, od: 5000, status: 'A', addr: '220 Main St, Hilliard OH' },
+    '1000200045': { name: 'Jordan Patel',        type: 'Personal checking', cif: 'C00031002', ledger: 85.12,    holds: 0,    od: 0,    status: 'F', addr: '9 Elm Ct, Dublin OH' }
+  },
+  bda: { acct: '9000000001', name: 'TDN settlement BDA (omnibus reserve)', ledger: 26000.00 },
+  cda: {
+    '7000200011': { name: 'Dana Whitfield',      dda: '1000200011', tokens: 1000.00,  wallet: '0x7A3F9e01b2C4d5E6f7081a2B3c4D5e6F7a8bC41D' },
+    '7000200037': { name: 'Rivera Hardware LLC', dda: '1000200037', tokens: 25000.00, wallet: '0x19B2c3D4e5F60718293a4B5c6D7e8F9012347E0A' }
+  },
+  seq: 4471, block: 18200450, journal: []
+};
+const KEY = 'agt-hogan-console-v1';
+let S;
+function load() { try { const j = localStorage.getItem(KEY); if (j) { S = JSON.parse(j); return; } } catch (e) {} S = JSON.parse(JSON.stringify(SEED)); }
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+load();
+
+const avail = a => r2(a.ledger - a.holds);
+const ddaOpts = () => Object.entries(S.dda).map(([k, a]) => [k, `${k} · ${a.name}${a.status !== 'A' ? ' (' + STAT[a.status] + ')' : ''}`]);
+const cdaOpts = () => Object.entries(S.cda).map(([k, c]) => [k, `${k} · ${c.name} · ${fmt(c.tokens)} tdUSD`]);
+const cdaForDda = d => Object.keys(S.cda).find(k => S.cda[k].dda === d);
+const supply = () => r2(Object.values(S.cda).reduce((t, c) => t + c.tokens, 0));
+const nextSeq = (k = 1) => S.seq + k;
+
+/* ════════════════ code block parser ════════════════
+   Each line may end with ⟦if=flag; unless=flag; log=text; set=NAME^val~NAME^val⟧
+   Conditions: a|b (or), a&!b (and / not).                                   */
+function B(title, lang, node, where, text, opt = {}) {
+  const lines = text.replace(/^\n/, '').replace(/\n\s*$/, '').split('\n').map(raw => {
+    const m = raw.match(/\s*⟦([^⟧]*)⟧\s*$/);
+    const meta = {}; let t = raw;
+    if (m) {
+      t = raw.slice(0, m.index);
+      m[1].split(';').forEach(p => { p = p.trim(); if (!p) return; const i = p.indexOf('='); const k = i < 0 ? p : p.slice(0, i).trim(); meta[k] = i < 0 ? true : p.slice(i + 1).trim(); });
+    }
+    return Object.assign({ t: t.replace(/\s+$/, '') }, meta);
+  });
+  return Object.assign({ title, lang, node, where, lines }, opt);
+}
+const cond = (expr, f) => String(expr).split('|').some(term => term.split('&').every(x => { x = x.trim(); return x[0] === '!' ? !f[x.slice(1)] : !!f[x]; }));
+const runs = (o, f) => (!o.if || cond(o.if, f)) && (!o.unless || !cond(o.unless, f));
+function isComment(t, lang) {
+  if (!t.trim()) return true;
+  if (lang === 'COBOL') return t.length > 6 && (t[6] === '*' || t[6] === '/');
+  if (lang === 'JCL') return /^\/\/\*/.test(t);
+  if (lang === 'YAML' || lang === 'HTTP') return /^\s*#/.test(t);
+  if (lang === 'XML') return /^\s*<!--/.test(t);
+  return false;
+}
+
+/* ════════════════ scenarios ════════════════ */
+const SC = [];
+
+/* ── 1. DDA maintenance ───────────────────────── */
+SC.push({
+  id: 'maint', tab: 'DDA Maintenance', tran: 'IDM1', prog: 'IDSDM100',
+  blurb: 'A teller changes a <b>demand deposit account</b> on the Hogan IDS master: status, overdraft limit, statement address, or a hold. Try changing anything on <b>Jordan Patel</b> (frozen), or closing an account that still has money in it.',
+  flow: [['Teller', '3270 terminal'], ['CICS IDM1', 'IDSDM100'], ['IDS DDA master', 'VSAM KSDS'], ['Audit + CIF', 'TD queue · memo'], ['Response', 'SEND MAP']],
+  fields: [
+    { id: 'acct', label: 'DDA account', type: 'select', full: 1, options: ddaOpts },
+    { id: 'mtype', label: 'Maintenance type', type: 'select', options: () => [['STAT', 'STAT · Account status'], ['ODLM', 'ODLM · Overdraft limit'], ['ADDR', 'ADDR · Statement address'], ['HOLD', 'HOLD · Place a hold']] },
+    { id: 'newval', label: 'New value', type: 'text', value: 'D', hint: v => ({ STAT: 'A active · F frozen · D dormant · C closed', ODLM: 'Dollar amount, 0 to 10,000', ADDR: 'Up to 40 characters', HOLD: 'Dollar amount to hold' })[v.mtype] },
+    { id: 'oper', label: 'Operator ID', type: 'text', value: 'TLR0457' }
+  ],
+  prep(v) {
+    const a = S.dda[v.acct], t = v.mtype, f = { ['m_' + t]: 1 };
+    let nv = (v.newval || '').trim(), old = '', msg = '';
+    f.frozen = a.status === 'F' && t !== 'STAT';
+    if (!f.frozen) {
+      if (t === 'STAT') { old = a.status; nv = nv.toUpperCase().charAt(0); if (!'AFDC'.includes(nv) || !nv) f.badSTAT = 1; else if (nv === 'C' && a.ledger !== 0) f.closebal = 1; }
+      if (t === 'ODLM') { old = plain(a.od); const n = num(nv); if (isNaN(n) || n < 0 || n > 10000) f.badODLM = 1; else nv = plain(n); }
+      if (t === 'ADDR') { old = a.addr; if (!nv || nv.length > 40) f.badADDR = 1; nv = nv.toUpperCase(); }
+      if (t === 'HOLD') { old = plain(a.holds); const n = num(nv); if (isNaN(n) || n <= 0) f.badHOLD = 1; else if (n > avail(a)) f.holdnsf = 1; else nv = plain(n); }
+    }
+    f.err = f.frozen || f.badSTAT || f.closebal || f.badODLM || f.badADDR || f.badHOLD || f.holdnsf;
+    msg = f.frozen ? 'IDS2001E ACCOUNT FROZEN - STATUS CHANGE ONLY'
+      : f.badSTAT ? 'IDS2101E INVALID STATUS CODE - USE A/F/D/C'
+      : f.closebal ? `IDS2201E CANNOT CLOSE - LEDGER ${fmt(a.ledger)} NOT ZERO`
+      : f.badODLM ? 'IDS2301E OD LIMIT MUST BE 0 - 10,000'
+      : f.badADDR ? 'IDS2401E ADDRESS REQUIRED, MAX 40 CHARS'
+      : f.badHOLD ? 'IDS2501E HOLD AMOUNT INVALID'
+      : f.holdnsf ? `IDS2502E HOLD EXCEEDS AVAILABLE ${fmt(avail(a))}`
+      : 'IDS0000I MAINTENANCE COMPLETE';
+    const newAmt = num(nv);
+    return {
+      f, msg, acct: v.acct, mtype: t, newval: nv, newvalq: `'${nv}'`, oper: (v.oper || 'TLR0457').toUpperCase().slice(0, 8),
+      status: a.status, ledger: plain(a.ledger), holds: plain(a.holds), od: plain(a.od), oldval: old, date: ymd(now()),
+      newhold: isNaN(newAmt) ? '' : plain(a.holds + newAmt), newamt: isNaN(newAmt) ? '0' : plain(newAmt),
+      memo: `${t} CHANGED BY ${(v.oper || 'TLR0457').toUpperCase()}`,
+      result: f.err ? { ok: false, title: 'Rejected by IDSDM100', msg } : { ok: true, title: 'Account updated', msg: `${msg} · ${t} ${old || '—'} → ${nv}` },
+      apply() {
+        if (t === 'STAT') a.status = nv; if (t === 'ODLM') a.od = num(nv); if (t === 'ADDR') a.addr = nv; if (t === 'HOLD') a.holds = r2(a.holds + num(nv));
+        S.journal.unshift({ ts: hms(now()), tran: 'IDM1', acct: v.acct, desc: `${t}: ${old || '—'} → ${nv}`, amt: null });
+        return [v.acct];
+      }
+    };
+  },
+  screen(v, c) {
+    const a = S.dda[v.acct];
+    return [
+      `<span class="h"> IDM1              AGDEMO BANK · IDS DDA MAINTENANCE        ${c.date} ${hms(now())}</span>`,
+      '',
+      ` ACCOUNT ....: <span class="u">${v.acct}</span>   ${esc(pad(a.name.toUpperCase(), 30))}  CIF ${a.cif}`,
+      ` STATUS .....: ${a.status} (${pad(STAT[a.status].toUpperCase(), 7)})   PRODUCT: ${a.type.toUpperCase()}`,
+      ` LEDGER .....: ${lpad(fmt(a.ledger), 14)}   HOLDS: ${lpad(fmt(a.holds), 10)}   OD LIMIT: ${lpad(fmt(a.od), 9)}`,
+      ` STMT ADDR ..: ${esc(a.addr.toUpperCase())}`,
+      '',
+      ` MAINT TYPE .: <span class="u">${pad(v.mtype, 4)}</span>      (STAT  ODLM  ADDR  HOLD)`,
+      ` NEW VALUE ..: <span class="u">${esc(pad(v.newval || '', 40).replace(/ /g, '_'))}</span>`,
+      ` OPERATOR ...: <span class="u">${esc(pad(c.oper, 8))}</span>`,
+      '',
+      c.done ? ` <span class="${c.f.err ? 'e' : 'h'}">${esc(c.msg)}</span>` : ' ',
+      ' PF1=HELP  PF3=EXIT  PF5=REFRESH  PF12=CANCEL  ENTER=PROCESS'
+    ].join('\n');
+  },
+  blocks: () => [
+    B('0000-MAINLINE · RECEIVE MAP', 'COBOL', 1, 'CICS · IDSDM100', `
+      *-----------------------------------------------------------*
+      * IDSDM100  DDA ACCOUNT MAINTENANCE        CICS TRAN IDM1     *
+      *-----------------------------------------------------------*
+       0000-MAINLINE.
+           EXEC CICS RECEIVE MAP('IDM1MAP') MAPSET('IDM1SET')
+                INTO(IDM1MAPI) RESP(WS-RESP) END-EXEC
+           MOVE ACCTI      TO WS-ACCT-NO          *> {{acct}}         ⟦set=WS-ACCT-NO^{{acct}}⟧
+           MOVE MTYPEI     TO WS-MAINT-TYPE       *> {{mtype}}        ⟦set=WS-MAINT-TYPE^'{{mtype}}'⟧
+           MOVE NEWVALI    TO WS-NEW-VALUE        *> {{newvalq}}      ⟦set=WS-NEW-VALUE^{{newvalq}}⟧
+           MOVE OPERI      TO WS-OPER-ID          *> {{oper}}         ⟦set=WS-OPER-ID^'{{oper}}'⟧
+           MOVE FUNCTION CURRENT-DATE(1:8) TO WS-CURR-DATE
+           PERFORM 1000-READ-MASTER
+           PERFORM 2000-VALIDATE THRU 2000-EXIT
+           IF NOT WS-ERROR-FOUND
+              PERFORM 3000-APPLY-MAINT                                ⟦unless=err⟧
+              PERFORM 4000-WRITE-AUDIT                                ⟦unless=err⟧
+           END-IF
+           PERFORM 9000-SEND-RESPONSE.`),
+    B('COPY IDSDDAR · DDA master record', 'COBOL', 2, 'copybook', `
+      * VSAM KSDS IDS.DDA.MASTER  - key = bank + account number
+       01  DDA-MASTER-REC.
+           05  DDA-KEY.
+               10  DDA-BANK-NO         PIC 9(04).
+               10  DDA-ACCT-NO         PIC 9(10).
+           05  DDA-CUST-CIF-NO         PIC X(12).
+           05  DDA-STATUS              PIC X(01).
+               88  DDA-ACTIVE          VALUE 'A'.
+               88  DDA-FROZEN          VALUE 'F'.
+               88  DDA-DORMANT         VALUE 'D'.
+               88  DDA-CLOSED          VALUE 'C'.
+           05  DDA-LEDGER-BAL          PIC S9(13)V99 COMP-3.
+           05  DDA-HOLD-AMT            PIC S9(13)V99 COMP-3.
+           05  DDA-OD-LIMIT            PIC S9(07)V99 COMP-3.
+           05  DDA-STMT-ADDR           PIC X(40).
+           05  DDA-LAST-MAINT-DATE     PIC 9(08).
+           05  DDA-LAST-MAINT-OPER     PIC X(08).`, { decl: true }),
+    B('1000-READ-MASTER', 'COBOL', 2, 'VSAM read for update', `
+       1000-READ-MASTER.
+           MOVE 0001        TO DDA-BANK-NO
+           MOVE WS-ACCT-NO  TO DDA-ACCT-NO
+           EXEC CICS READ FILE('IDSDDAM') INTO(DDA-MASTER-REC)
+                RIDFLD(DDA-KEY) UPDATE RESP(WS-RESP) END-EXEC          ⟦log=IDS1000I READ UPDATE IDSDDAM KEY 0001{{acct}} RESP=NORMAL⟧
+           MOVE DDA-STATUS     TO WS-OLD-STATUS   *> '{{status}}'     ⟦set=DDA-STATUS^'{{status}}'⟧
+           MOVE DDA-LEDGER-BAL TO WS-LEDGER       *> {{ledger}}       ⟦set=DDA-LEDGER-BAL^{{ledger}}⟧`),
+    B('2000-VALIDATE', 'COBOL', 1, 'business edits', `
+       2000-VALIDATE.
+           IF DDA-FROZEN AND WS-MAINT-TYPE NOT = 'STAT'
+              SET WS-ERROR-FOUND TO TRUE                              ⟦if=frozen; log=!IDS2001E ACCOUNT {{acct}} FROZEN - STATUS CHANGE ONLY⟧
+              GO TO 2000-EXIT                                         ⟦if=frozen⟧
+           END-IF                                                     ⟦unless=frozen⟧
+           EVALUATE WS-MAINT-TYPE                                     ⟦unless=frozen⟧
+             WHEN 'STAT'                                              ⟦if=m_STAT⟧
+               MOVE DDA-STATUS TO WS-OLD-VALUE                        ⟦if=m_STAT; set=WS-OLD-VALUE^'{{oldval}}'⟧
+               MOVE WS-NEW-VALUE(1:1) TO WS-NEW-STAT                  ⟦if=m_STAT⟧
+               IF NOT WS-VALID-STAT                                   ⟦if=m_STAT⟧
+                  SET WS-ERROR-FOUND TO TRUE                          ⟦if=badSTAT; log=!IDS2101E INVALID STATUS CODE - USE A/F/D/C⟧
+               END-IF                                                 ⟦if=m_STAT⟧
+               IF WS-NEW-STAT = 'C' AND DDA-LEDGER-BAL NOT = ZERO     ⟦if=m_STAT&!badSTAT⟧
+                  SET WS-ERROR-FOUND TO TRUE                          ⟦if=closebal; log=!IDS2201E CANNOT CLOSE - LEDGER {{ledger}} NOT ZERO⟧
+               END-IF                                                 ⟦if=m_STAT&!badSTAT⟧
+             WHEN 'ODLM'                                              ⟦if=m_ODLM⟧
+               MOVE DDA-OD-LIMIT TO WS-OLD-VALUE                      ⟦if=m_ODLM; set=WS-OLD-VALUE^{{oldval}}⟧
+               COMPUTE WS-NEW-AMT = FUNCTION NUMVAL(WS-NEW-VALUE)     ⟦if=m_ODLM; set=WS-NEW-AMT^{{newamt}}⟧
+               IF WS-NEW-AMT < 0 OR WS-NEW-AMT > 10000                ⟦if=m_ODLM⟧
+                  SET WS-ERROR-FOUND TO TRUE                          ⟦if=badODLM; log=!IDS2301E OD LIMIT MUST BE 0 - 10,000⟧
+               END-IF                                                 ⟦if=m_ODLM⟧
+             WHEN 'ADDR'                                              ⟦if=m_ADDR⟧
+               MOVE DDA-STMT-ADDR TO WS-OLD-VALUE                     ⟦if=m_ADDR; set=WS-OLD-VALUE^'{{oldval}}'⟧
+               IF WS-NEW-VALUE = SPACES                               ⟦if=m_ADDR⟧
+                  SET WS-ERROR-FOUND TO TRUE                          ⟦if=badADDR; log=!IDS2401E ADDRESS REQUIRED, MAX 40 CHARS⟧
+               END-IF                                                 ⟦if=m_ADDR⟧
+             WHEN 'HOLD'                                              ⟦if=m_HOLD⟧
+               MOVE DDA-HOLD-AMT TO WS-OLD-VALUE                      ⟦if=m_HOLD; set=WS-OLD-VALUE^{{oldval}}⟧
+               COMPUTE WS-NEW-AMT = FUNCTION NUMVAL(WS-NEW-VALUE)     ⟦if=m_HOLD; set=WS-NEW-AMT^{{newamt}}⟧
+               IF WS-NEW-AMT NOT > ZERO                               ⟦if=m_HOLD⟧
+                  SET WS-ERROR-FOUND TO TRUE                          ⟦if=badHOLD; log=!IDS2501E HOLD AMOUNT INVALID⟧
+               END-IF                                                 ⟦if=m_HOLD⟧
+               IF WS-NEW-AMT > DDA-LEDGER-BAL - DDA-HOLD-AMT          ⟦if=m_HOLD&!badHOLD⟧
+                  SET WS-ERROR-FOUND TO TRUE                          ⟦if=holdnsf; log=!{{msg}}⟧
+               END-IF                                                 ⟦if=m_HOLD&!badHOLD⟧
+           END-EVALUATE.                                              ⟦unless=frozen⟧
+       2000-EXIT.
+           EXIT.`),
+    B('3000-APPLY-MAINT', 'COBOL', 2, 'REWRITE master', `
+       3000-APPLY-MAINT.
+           EVALUATE WS-MAINT-TYPE
+             WHEN 'STAT' MOVE WS-NEW-STAT    TO DDA-STATUS            ⟦if=m_STAT; set=DDA-STATUS^'{{newval}}'⟧
+             WHEN 'ODLM' MOVE WS-NEW-AMT     TO DDA-OD-LIMIT          ⟦if=m_ODLM; set=DDA-OD-LIMIT^{{newval}}⟧
+             WHEN 'ADDR' MOVE WS-NEW-VALUE   TO DDA-STMT-ADDR         ⟦if=m_ADDR; set=DDA-STMT-ADDR^'{{newval}}'⟧
+             WHEN 'HOLD' ADD  WS-NEW-AMT     TO DDA-HOLD-AMT          ⟦if=m_HOLD; set=DDA-HOLD-AMT^{{newhold}}⟧
+           END-EVALUATE
+           MOVE WS-CURR-DATE TO DDA-LAST-MAINT-DATE   *> {{date}}
+           MOVE WS-OPER-ID   TO DDA-LAST-MAINT-OPER
+           EXEC CICS REWRITE FILE('IDSDDAM') FROM(DDA-MASTER-REC)
+                RESP(WS-RESP) END-EXEC                                ⟦log=IDS3000I REWRITE IDSDDAM {{acct}} {{mtype}} RESP=NORMAL⟧`, { unless: 'err' }),
+    B('4000-WRITE-AUDIT', 'COBOL', 3, 'TD queue + CIF memo', `
+       4000-WRITE-AUDIT.
+           MOVE WS-ACCT-NO     TO AUD-ACCT-NO
+           MOVE WS-MAINT-TYPE  TO AUD-FIELD-CODE
+           MOVE WS-OLD-VALUE   TO AUD-BEFORE          *> '{{oldval}}'
+           MOVE WS-NEW-VALUE   TO AUD-AFTER           *> {{newvalq}}
+           MOVE WS-OPER-ID     TO AUD-OPER-ID
+           EXEC CICS WRITEQ TD QUEUE('IDAU') FROM(AUDIT-REC)
+                LENGTH(LENGTH OF AUDIT-REC) END-EXEC                  ⟦log=IDS4000I AUDIT WRITTEN TO TDQ IDAU⟧
+           EXEC CICS LINK PROGRAM('CIFMEMO1')
+                COMMAREA(CIF-MEMO-AREA) END-EXEC   *> '{{memo}}'      ⟦log=CIF4100I MEMO ADDED TO CUSTOMER FILE⟧`, { unless: 'err' }),
+    B('9000-SEND-RESPONSE', 'COBOL', 4, 'commit or roll back', `
+       9000-SEND-RESPONSE.
+           IF WS-ERROR-FOUND
+              EXEC CICS SYNCPOINT ROLLBACK END-EXEC                   ⟦if=err; log=!DFHSP ROLLBACK - NO CHANGES KEPT⟧
+              MOVE WS-MSG TO MSGO                                     ⟦if=err; set=MSGO^'{{msg}}'⟧
+           ELSE                                                       ⟦unless=err⟧
+              EXEC CICS SYNCPOINT END-EXEC                            ⟦unless=err; log=DFHSP SYNCPOINT - UNIT OF WORK COMMITTED⟧
+              MOVE 'IDS0000I MAINTENANCE COMPLETE' TO MSGO            ⟦unless=err; set=MSGO^'{{msg}}'⟧
+           END-IF
+           EXEC CICS SEND MAP('IDM1MAP') MAPSET('IDM1SET')
+                FROM(IDM1MAPO) DATAONLY END-EXEC
+           EXEC CICS RETURN TRANSID('IDM1') COMMAREA(WS-COMM)
+                END-EXEC.`)
+  ]
+});
+
+/* ── 2. DDA → DDA transfer ────────────────────── */
+SC.push({
+  id: 'xfer', tab: 'DDA → DDA Transfer', tran: 'IXF1', prog: 'IDSXF200',
+  blurb: 'Move money between two <b>DDAs</b> on the same core. The program locks both records, checks available balance plus overdraft, posts the debit and credit, and writes both journal entries in one unit of work. Tonight\'s batch job hard-posts them.',
+  flow: [['Teller', '3270 terminal'], ['CICS IXF1', 'IDSXF200'], ['IDS DDA master', 'debit + credit'], ['IDS journal', 'memo-post'], ['Nightly batch', 'JCL IDSNITE']],
+  fields: [
+    { id: 'from', label: 'From DDA (debit)', type: 'select', full: 1, options: ddaOpts },
+    { id: 'to', label: 'To DDA (credit)', type: 'select', full: 1, options: ddaOpts, value: '1000200029' },
+    { id: 'amt', label: 'Amount (USD)', type: 'text', value: '250.00', inputmode: 'decimal' },
+    { id: 'memo', label: 'Memo', type: 'text', value: 'RENT SPLIT' }
+  ],
+  prep(v) {
+    const a = S.dda[v.from], b = S.dda[v.to], amt = num(v.amt), f = {};
+    f.same = v.from === v.to; f.badamt = !f.same && (isNaN(amt) || amt <= 0); f.e1 = f.same || f.badamt;
+    f.lowFirst = v.from < v.to;
+    if (!f.e1) {
+      f.frz = a.status !== 'A' || !(b.status === 'A' || b.status === 'D');
+      const av = avail(a), avod = r2(av + a.od);
+      if (!f.frz) { f.nsf = amt > avod; f.useOD = !f.nsf && amt > av; }
+    }
+    f.err = f.e1 || f.frz || f.nsf;
+    const A = isNaN(amt) ? 0 : amt;
+    const frzmsg = a.status !== 'A' ? `FROM ${v.from} ${STAT[a.status].toUpperCase()}` : `TO ${v.to} ${STAT[b.status].toUpperCase()}`;
+    const msg = f.same ? 'IDS3101E FROM AND TO ACCOUNT ARE THE SAME' : f.badamt ? 'IDS3102E TRANSFER AMOUNT MUST BE > 0' : f.frz ? `IDS3201E ${frzmsg} - TRANSFER BLOCKED` : f.nsf ? `IDS3001E NSF - REQUESTED ${fmt(A)}, AVAILABLE ${fmt(avail(a) + a.od)}` : `IDS0000I TRANSFER POSTED - JOURNAL SEQ ${nextSeq()}`;
+    return {
+      f, msg, from: v.from, to: v.to, amt: plain(A), amtc: fmt(A), memo: (v.memo || '').toUpperCase().slice(0, 20), frzmsg,
+      frombal: plain(a.ledger), tobal: plain(b.ledger), fromstat: a.status, tostat: b.status,
+      avail: plain(avail(a)), availod: plain(avail(a) + a.od), availodc: fmt(avail(a) + a.od),
+      fromnew: plain(a.ledger - A), tonew: plain(b.ledger + A), seq: nextSeq(), seq2: nextSeq(2), date: ymd(now()),
+      result: f.err ? { ok: false, title: 'Rejected by IDSXF200', msg } : { ok: true, warn: f.useOD, title: f.useOD ? 'Posted, using overdraft' : 'Transfer posted', msg: `${msg} · ${fmt(A)} from ${v.from} to ${v.to}` },
+      apply() {
+        a.ledger = r2(a.ledger - A); b.ledger = r2(b.ledger + A); S.seq += 2;
+        S.journal.unshift({ ts: hms(now()), tran: 'IXF1', acct: v.to, desc: `CR from ${v.from} · ${(v.memo || '').toUpperCase()}`, amt: A });
+        S.journal.unshift({ ts: hms(now()), tran: 'IXF1', acct: v.from, desc: `DR to ${v.to} · ${(v.memo || '').toUpperCase()}`, amt: -A });
+        return [v.from, v.to];
+      }
+    };
+  },
+  screen(v, c) {
+    const a = S.dda[v.from], b = S.dda[v.to];
+    return [
+      `<span class="h"> IXF1              AGDEMO BANK · IDS FUNDS TRANSFER          ${c.date} ${hms(now())}</span>`,
+      '',
+      ` FROM DDA ...: <span class="u">${v.from}</span>   ${esc(pad(a.name.toUpperCase(), 24))} STATUS ${a.status}`,
+      `               LEDGER ${lpad(fmt(a.ledger), 13)}  AVAIL ${lpad(fmt(avail(a)), 13)}  OD ${lpad(fmt(a.od), 9)}`,
+      ` TO DDA .....: <span class="u">${v.to}</span>   ${esc(pad(b.name.toUpperCase(), 24))} STATUS ${b.status}`,
+      `               LEDGER ${lpad(fmt(b.ledger), 13)}`,
+      '',
+      ` AMOUNT .....: <span class="u">${esc(lpad(v.amt || '', 14, '_'))}</span>   USD`,
+      ` MEMO .......: <span class="u">${esc(pad((v.memo || '').toUpperCase(), 20).replace(/ /g, '_'))}</span>`,
+      ` EFFECTIVE ..: ${c.date}   (MEMO-POST NOW · HARD-POST IN TONIGHT'S IDSNITE)`,
+      '',
+      c.done ? ` <span class="${c.f.err ? 'e' : 'h'}">${esc(c.msg)}</span>` : ' ',
+      ' PF1=HELP  PF3=EXIT  PF5=REFRESH  PF12=CANCEL  ENTER=PROCESS'
+    ].join('\n');
+  },
+  blocks: () => [
+    B('0000-MAINLINE · RECEIVE MAP', 'COBOL', 1, 'CICS · IDSXF200', `
+      *-----------------------------------------------------------*
+      * IDSXF200  DDA-TO-DDA FUNDS TRANSFER     CICS TRAN IXF1      *
+      *-----------------------------------------------------------*
+       0000-MAINLINE.
+           EXEC CICS RECEIVE MAP('IXF1MAP') MAPSET('IXF1SET')
+                INTO(IXF1MAPI) END-EXEC
+           MOVE FROMI  TO WS-DR-ACCT                *> {{from}}       ⟦set=WS-DR-ACCT^{{from}}⟧
+           MOVE TOI    TO WS-CR-ACCT                *> {{to}}         ⟦set=WS-CR-ACCT^{{to}}⟧
+           COMPUTE WS-XFER-AMT = FUNCTION NUMVAL(AMTI) *> {{amt}}     ⟦set=WS-XFER-AMT^{{amt}}⟧
+           MOVE MEMOI  TO WS-MEMO                   *> '{{memo}}'
+           PERFORM 1000-EDIT-INPUT THRU 1000-EXIT
+           IF NOT WS-ERROR-FOUND
+              PERFORM 2000-LOCK-ACCOUNTS                              ⟦unless=e1⟧
+              PERFORM 3000-CHECK-FUNDS THRU 3000-EXIT                 ⟦unless=e1⟧
+           END-IF
+           IF NOT WS-ERROR-FOUND                                      ⟦unless=e1⟧
+              PERFORM 4000-POST-TRANSFER                              ⟦unless=err⟧
+              PERFORM 5000-WRITE-JOURNAL                              ⟦unless=err⟧
+           END-IF                                                     ⟦unless=e1⟧
+           PERFORM 9000-SEND-RESPONSE.`),
+    B('1000-EDIT-INPUT', 'COBOL', 1, 'screen edits', `
+       1000-EDIT-INPUT.
+           IF WS-DR-ACCT = WS-CR-ACCT
+              SET WS-ERROR-FOUND TO TRUE                              ⟦if=same; log=!IDS3101E FROM AND TO ACCOUNT ARE THE SAME⟧
+              GO TO 1000-EXIT                                         ⟦if=same⟧
+           END-IF                                                     ⟦unless=same⟧
+           IF WS-XFER-AMT NOT > ZERO                                  ⟦unless=same⟧
+              SET WS-ERROR-FOUND TO TRUE                              ⟦if=badamt; log=!IDS3102E TRANSFER AMOUNT MUST BE > 0⟧
+           END-IF.                                                    ⟦unless=same⟧
+       1000-EXIT.
+           EXIT.`),
+    B('2000-LOCK-ACCOUNTS', 'COBOL', 2, 'two reads for update', `
+       2000-LOCK-ACCOUNTS.
+      *    Always lock the lower account number first. Every transfer
+      *    takes its locks in the same order, so two tellers moving
+      *    money between the same pair can never deadlock.
+           IF WS-DR-ACCT < WS-CR-ACCT
+              PERFORM 2100-READ-DEBIT                                 ⟦if=lowFirst⟧
+              PERFORM 2200-READ-CREDIT                                ⟦if=lowFirst⟧
+           ELSE                                                       ⟦unless=lowFirst⟧
+              PERFORM 2200-READ-CREDIT                                ⟦unless=lowFirst⟧
+              PERFORM 2100-READ-DEBIT                                 ⟦unless=lowFirst⟧
+           END-IF.
+       2100-READ-DEBIT.
+           MOVE WS-DR-ACCT TO DDA-ACCT-NO
+           EXEC CICS READ FILE('IDSDDAM') INTO(DR-MASTER-REC)
+                RIDFLD(DDA-KEY) UPDATE TOKEN(WS-DR-TOKEN) END-EXEC     ⟦set=DR-LEDGER-BAL^{{frombal}}~DR-STATUS^'{{fromstat}}'; log=IDS2100I LOCKED DEBIT  {{from}}⟧
+       2200-READ-CREDIT.
+           MOVE WS-CR-ACCT TO DDA-ACCT-NO
+           EXEC CICS READ FILE('IDSDDAM') INTO(CR-MASTER-REC)
+                RIDFLD(DDA-KEY) UPDATE TOKEN(WS-CR-TOKEN) END-EXEC     ⟦set=CR-LEDGER-BAL^{{tobal}}~CR-STATUS^'{{tostat}}'; log=IDS2200I LOCKED CREDIT {{to}}⟧`, { unless: 'e1' }),
+    B('3000-CHECK-FUNDS', 'COBOL', 2, 'available + overdraft', `
+       3000-CHECK-FUNDS.
+           IF NOT DR-ACTIVE OR NOT CR-CAN-RECEIVE
+              SET WS-ERROR-FOUND TO TRUE                              ⟦if=frz; log=!IDS3201E {{frzmsg}} - TRANSFER BLOCKED⟧
+              GO TO 3000-EXIT                                         ⟦if=frz⟧
+           END-IF                                                     ⟦unless=frz⟧
+           COMPUTE WS-AVAIL    = DR-LEDGER-BAL - DR-HOLD-AMT          ⟦unless=frz; set=WS-AVAIL^{{avail}}⟧
+           COMPUTE WS-AVAIL-OD = WS-AVAIL + DR-OD-LIMIT               ⟦unless=frz; set=WS-AVAIL-OD^{{availod}}⟧
+           IF WS-XFER-AMT > WS-AVAIL-OD                               ⟦unless=frz⟧
+              SET WS-ERROR-FOUND TO TRUE                              ⟦if=nsf; log=!IDS3001E NSF - REQUESTED {{amtc}}, AVAILABLE {{availodc}}⟧
+           ELSE                                                       ⟦unless=frz|nsf⟧
+              IF WS-XFER-AMT > WS-AVAIL                               ⟦unless=frz|nsf⟧
+                 SET WS-OD-USED TO TRUE                               ⟦if=useOD; log=~IDS3002W TRANSFER DIPS INTO OVERDRAFT LINE⟧
+              END-IF                                                  ⟦unless=frz|nsf⟧
+           END-IF.                                                    ⟦unless=frz⟧
+       3000-EXIT.
+           EXIT.`, { unless: 'e1' }),
+    B('4000-POST-TRANSFER', 'COBOL', 2, 'memo-post both sides', `
+       4000-POST-TRANSFER.
+           SUBTRACT WS-XFER-AMT FROM DR-LEDGER-BAL                    ⟦set=DR-LEDGER-BAL^{{fromnew}}⟧
+           ADD      WS-XFER-AMT TO   CR-LEDGER-BAL                    ⟦set=CR-LEDGER-BAL^{{tonew}}⟧
+           EXEC CICS REWRITE FILE('IDSDDAM') FROM(DR-MASTER-REC)
+                TOKEN(WS-DR-TOKEN) END-EXEC
+           EXEC CICS REWRITE FILE('IDSDDAM') FROM(CR-MASTER-REC)
+                TOKEN(WS-CR-TOKEN) END-EXEC                           ⟦log=IDS4000I POSTED {{amtc}} {{from}} -> {{to}}⟧`, { unless: 'err' }),
+    B('5000-WRITE-JOURNAL', 'COBOL', 3, 'IDS online journal', `
+       5000-WRITE-JOURNAL.
+           ADD 1 TO WS-JRNL-SEQ                                       ⟦set=WS-JRNL-SEQ^{{seq}}⟧
+           MOVE 'DR' TO JRN-DR-CR    MOVE '0427' TO JRN-TRAN-CODE
+           MOVE WS-DR-ACCT TO JRN-ACCT-NO
+           EXEC CICS WRITE FILE('IDSJRNL') FROM(JOURNAL-REC)
+                RIDFLD(JRN-KEY) END-EXEC
+           ADD 1 TO WS-JRNL-SEQ                                       ⟦set=WS-JRNL-SEQ^{{seq2}}⟧
+           MOVE 'CR' TO JRN-DR-CR    MOVE '0527' TO JRN-TRAN-CODE
+           MOVE WS-CR-ACCT TO JRN-ACCT-NO
+           EXEC CICS WRITE FILE('IDSJRNL') FROM(JOURNAL-REC)
+                RIDFLD(JRN-KEY) END-EXEC                              ⟦log=IDS5000I JOURNAL SEQ {{seq}}-{{seq2}} DR/CR WRITTEN⟧`, { unless: 'err' }),
+    B('9000-SEND-RESPONSE', 'COBOL', 3, 'commit or roll back', `
+       9000-SEND-RESPONSE.
+           IF WS-ERROR-FOUND
+              EXEC CICS SYNCPOINT ROLLBACK END-EXEC                   ⟦if=err; log=!DFHSP ROLLBACK - LOCKS RELEASED, NOTHING POSTED⟧
+           ELSE                                                       ⟦unless=err⟧
+              EXEC CICS SYNCPOINT END-EXEC                            ⟦unless=err; log=DFHSP SYNCPOINT - BOTH SIDES COMMITTED TOGETHER⟧
+           END-IF
+           MOVE WS-MSG TO MSGO                                        ⟦set=MSGO^'{{msg}}'⟧
+           EXEC CICS SEND MAP('IXF1MAP') MAPSET('IXF1SET')
+                FROM(IXF1MAPO) DATAONLY END-EXEC
+           EXEC CICS RETURN TRANSID('IXF1') END-EXEC.`),
+    B('IDSNITE · tonight\'s batch (JCL)', 'JCL', 4, 'runs after close of business', `
+//IDSNITE  JOB (AGD01),'IDS NIGHTLY POST',CLASS=A,MSGCLASS=X
+//* Hard-post today's online journal to the DDA master,
+//* then cut the statement extract. Seq {{seq}}-{{seq2}} rides here.
+//STEP010  EXEC PGM=IDSB1000,PARM='POSTDATE={{date}}'
+//STEPLIB  DD DSN=AGD.HOGAN.IDS.LOADLIB,DISP=SHR
+//JRNLIN   DD DSN=AGD.IDS.ONLINE.JOURNAL,DISP=SHR
+//DDAMAST  DD DSN=AGD.IDS.DDA.MASTER,DISP=SHR
+//EXCEPT   DD SYSOUT=*
+//STEP020  EXEC PGM=IDSB2000,COND=(4,LT)
+//STMTOUT  DD DSN=AGD.IDS.STMT.EXTRACT(+1),
+//            DISP=(NEW,CATLG,DELETE),UNIT=SYSDA,
+//            SPACE=(CYL,(50,10),RLSE)
+//SYSOUT   DD SYSOUT=*`, { decl: true, unless: 'err', declLog: 'JES2  IDSNITE QUEUED FOR 23:30 - SEQ {{seq}}-{{seq2}} WILL HARD-POST' })
+  ]
+});
+
+/* ── 3. Tokenized deposit network ─────────────── */
+SC.push({
+  id: 'tdn', tab: 'Tokenized Network', tran: 'ITK1', prog: 'TDNXF300',
+  blurb: 'Three accounts work together. The <b>DDA</b> is the customer\'s checking account. The <b>BDA</b> (Bank Deposit Account) is the bank\'s omnibus reserve that backs every token. The <b>CDA</b> (Custody Deposit Account) holds the customer\'s tokenized position on the network. Mint moves DDA → BDA and issues tokens to the CDA; Burn reverses it; Transfer moves tokens CDA → CDA with no cash movement.',
+  flow: [['Teller / app', 'request'], ['CICS ITK1', 'TDNXF300'], ['DDA · BDA · CDA', 'Hogan ledgers'], ['TDN gateway', 'MQ + token contract'], ['Reserve check', 'BDA = supply']],
+  fields: [
+    { id: 'action', label: 'Action', type: 'select', full: 1, options: () => [['MINT', 'MINT · Tokenize: DDA → BDA → CDA'], ['BURN', 'BURN · Redeem: CDA → BDA → DDA'], ['XFER', 'XFER · On-network: CDA → CDA']] },
+    { id: 'acct', label: 'Account', type: 'select', full: 1, options: v => v.action === 'MINT' ? ddaOpts() : cdaOpts(), labelFn: v => v.action === 'MINT' ? 'Customer DDA (debit)' : 'Source CDA' },
+    { id: 'cdaTo', label: 'Destination CDA', type: 'select', full: 1, options: cdaOpts, show: v => v.action === 'XFER', value: '7000200037' },
+    { id: 'amt', label: 'Amount (USD / tdUSD)', type: 'text', value: '500.00', inputmode: 'decimal' }
+  ],
+  prep(v) {
+    const act = v.action, amt = num(v.amt), A = isNaN(amt) ? 0 : amt, f = { ['a_' + act]: 1 };
+    f.badamt = isNaN(amt) || amt <= 0; f.ev = !f.badamt;
+    let d, c, c2, cdaacct, newWallet = null, errmsg = '';
+    if (act === 'MINT') {
+      d = S.dda[v.acct]; cdaacct = cdaForDda(v.acct);
+      if (!cdaacct) { f.newcda = 1; cdaacct = '7' + v.acct.slice(1); newWallet = '0x' + hex(20); }
+      c = S.cda[cdaacct] || { name: d.name, dda: v.acct, tokens: 0, wallet: newWallet };
+      if (f.ev) { f.frz = d.status !== 'A'; f.nsf = !f.frz && A > avail(d); }
+      errmsg = f.frz ? `TDN2101E DDA ${v.acct} NOT ACTIVE (${STAT[d.status].toUpperCase()})` : f.nsf ? `TDN2102E COLLECTED FUNDS ${fmt(avail(d))} < ${fmt(A)} - NO OD FOR TOKENS` : '';
+    } else {
+      c = S.cda[v.acct] || S.cda[Object.keys(S.cda)[0]]; cdaacct = v.acct; d = S.dda[c.dda];
+      if (act === 'XFER') { c2 = S.cda[v.cdaTo]; f.same = v.cdaTo === v.acct; }
+      if (f.ev) { f.lowtok = A > c.tokens; f.frz = act === 'BURN' && d.status === 'C'; }
+      errmsg = f.same ? 'TDN2301E SOURCE AND DESTINATION CDA ARE THE SAME' : f.lowtok ? `TDN2201E TOKEN BALANCE ${fmt(c.tokens)} < ${fmt(A)}` : f.frz ? `TDN2202E LINKED DDA ${c.dda} IS CLOSED` : '';
+    }
+    if (act !== 'XFER') f.same = false;
+    f.err = f.badamt || f.frz || f.nsf || f.lowtok || f.same;
+    const bdaNew = act === 'MINT' ? S.bda.ledger + A : act === 'BURN' ? S.bda.ledger - A : S.bda.ledger;
+    const sup = act === 'MINT' ? supply() + A : act === 'BURN' ? supply() - A : supply();
+    const tx = '0x' + hex(32), ref = 'TDN' + ymd(now()).slice(2) + lpad(nextSeq(), 6, '0');
+    const call = act === 'MINT' ? `mint(${(c.wallet || newWallet).slice(0, 10)}…, ${plain(A)})` : act === 'BURN' ? `burn(${c.wallet.slice(0, 10)}…, ${plain(A)})` : `transfer(${c.wallet.slice(0, 10)}… → ${c2.wallet.slice(0, 10)}…, ${plain(A)})`;
+    const msg = f.badamt ? 'TDN2001E AMOUNT MUST BE > 0' : f.err ? errmsg : `TDN0000I ${act} ${fmt(A)} tdUSD CONFIRMED BLOCK ${S.block + 1}`;
+    return {
+      f, msg, errmsg, action: act, actionl: act.toLowerCase(), acct: v.acct, cdaTo: v.cdaTo || '', amt: plain(A), amtc: fmt(A),
+      dda: c.dda || v.acct, ddabal: plain(d.ledger), availc: fmt(avail(d)), ddanew: plain(act === 'MINT' ? d.ledger - A : d.ledger + A),
+      cdaacct, cdabal: plain(c.tokens), cdanew: plain(act === 'MINT' ? c.tokens + A : c.tokens - A), cda2bal: c2 ? plain(c2.tokens) : '', cda2new: c2 ? plain(c2.tokens + A) : '',
+      bdabal: plain(S.bda.ledger), bdanew: plain(bdaNew), bdanewc: fmt(bdaNew), supply: plain(sup), supplyc: fmt(sup),
+      wallet: (c.wallet || newWallet), wallet2: c2 ? c2.wallet : '', tx, txs: tx.slice(0, 14) + '…' + tx.slice(-6), ref, call, block: S.block + 1,
+      result: f.err ? { ok: false, title: 'Rejected by TDNXF300', msg } : { ok: true, title: { MINT: 'Tokens minted', BURN: 'Tokens redeemed', XFER: 'Tokens moved on the network' }[act], msg: `${msg} · tx ${tx.slice(0, 12)}…` },
+      apply() {
+        const touched = [];
+        if (act === 'MINT') { if (!S.cda[cdaacct]) S.cda[cdaacct] = { name: d.name, dda: v.acct, tokens: 0, wallet: newWallet }; d.ledger = r2(d.ledger - A); S.bda.ledger = r2(S.bda.ledger + A); S.cda[cdaacct].tokens = r2(S.cda[cdaacct].tokens + A); touched.push(v.acct, cdaacct, S.bda.acct); }
+        if (act === 'BURN') { c.tokens = r2(c.tokens - A); S.bda.ledger = r2(S.bda.ledger - A); d.ledger = r2(d.ledger + A); touched.push(c.dda, cdaacct, S.bda.acct); }
+        if (act === 'XFER') { c.tokens = r2(c.tokens - A); c2.tokens = r2(c2.tokens + A); touched.push(v.acct, v.cdaTo); }
+        S.seq += 1; S.block += 1;
+        S.journal.unshift({ ts: hms(now()), tran: 'ITK1', acct: act === 'XFER' ? `${v.acct}→${v.cdaTo}` : cdaacct, desc: `${act} tdUSD · tx ${tx.slice(0, 10)}…`, amt: act === 'BURN' ? -A : A });
+        return touched;
+      }
+    };
+  },
+  screen(v, c) {
+    const lines = [`<span class="h"> ITK1              AGDEMO BANK · TOKENIZED DEPOSIT NETWORK  ${c.date || ymd(now())} ${hms(now())}</span>`, ''];
+    lines.push(` ACTION .....: <span class="u">${v.action}</span>    (MINT  BURN  XFER)`);
+    if (v.action === 'MINT') {
+      const d = S.dda[v.acct];
+      lines.push(` DDA ........: <span class="u">${v.acct}</span>   ${esc(pad(d.name.toUpperCase(), 24))} AVAIL ${lpad(fmt(avail(d)), 12)}`);
+      lines.push(` CDA ........: ${c.cdaacct}${c.f.newcda ? '   ** NEW - WILL ONBOARD **' : '   TOKENS ' + lpad(c.cdabal, 12)}`);
+    } else {
+      lines.push(` SOURCE CDA .: <span class="u">${v.acct}</span>   TOKENS ${lpad(c.cdabal, 12)}   LINKED DDA ${c.dda}`);
+      if (v.action === 'XFER') lines.push(` DEST CDA ...: <span class="u">${v.cdaTo}</span>   TOKENS ${lpad(c.cda2bal, 12)}`);
+      else lines.push(` REDEEM TO ..: DDA ${c.dda}`);
+    }
+    lines.push(` BDA ........: ${S.bda.acct}   RESERVE ${lpad(fmt(S.bda.ledger), 13)}   SUPPLY ${lpad(fmt(supply()), 13)}`);
+    lines.push(` AMOUNT .....: <span class="u">${esc(lpad(v.amt || '', 14, '_'))}</span>   tdUSD (1 TOKEN = 1.00 USD)`);
+    lines.push(` WALLET .....: ${esc(c.wallet || '')}`);
+    lines.push('');
+    lines.push(c.done ? ` <span class="${c.f.err ? 'e' : 'h'}">${esc(c.msg)}</span>` : ' ');
+    lines.push(' PF1=HELP  PF3=EXIT  PF7=TX HISTORY  PF12=CANCEL  ENTER=PROCESS');
+    return lines.join('\n');
+  },
+  blocks: () => [
+    B('0000-MAINLINE · RECEIVE MAP', 'COBOL', 1, 'CICS · TDNXF300', `
+      *-----------------------------------------------------------*
+      * TDNXF300  TOKENIZED DEPOSIT MOVEMENT     CICS TRAN ITK1     *
+      *   MINT : DDA --> BDA (reserve) --> tokens issued to CDA     *
+      *   BURN : CDA tokens burned --> BDA --> DDA                  *
+      *   XFER : CDA --> CDA on the network, no cash moves          *
+      *-----------------------------------------------------------*
+       0000-MAINLINE.
+           EXEC CICS RECEIVE MAP('ITK1MAP') MAPSET('ITK1SET')
+                INTO(ITK1MAPI) END-EXEC
+           MOVE ACTIONI TO WS-TDN-ACTION            *> '{{action}}'   ⟦set=WS-TDN-ACTION^'{{action}}'⟧
+           MOVE ACCTI   TO WS-SRC-ACCT              *> {{acct}}       ⟦set=WS-SRC-ACCT^{{acct}}⟧
+           MOVE CDATOI  TO WS-DST-CDA               *> {{cdaTo}}      ⟦if=a_XFER; set=WS-DST-CDA^{{cdaTo}}⟧
+           COMPUTE WS-TDN-AMT = FUNCTION NUMVAL(AMTI) *> {{amt}}      ⟦set=WS-TDN-AMT^{{amt}}⟧
+           PERFORM 1000-READ-POSITIONS
+           PERFORM 2000-VALIDATE THRU 2000-EXIT
+           IF NOT WS-ERROR-FOUND
+              PERFORM 3000-CORE-POSTINGS                              ⟦unless=err⟧
+              PERFORM 4000-CALL-TDN-GATEWAY                           ⟦unless=err⟧
+              PERFORM 5000-CONFIRM-AND-RECON                          ⟦unless=err⟧
+           END-IF
+           PERFORM 9000-SEND-RESPONSE.`),
+    B('COPY TDNCDAR / TDNBDAR · token ledgers', 'COBOL', 2, 'copybooks', `
+      * Custody Deposit Account - the customer's tokenized position
+       01  CDA-MASTER-REC.
+           05  CDA-ACCT-NO             PIC 9(10).
+           05  CDA-LINKED-DDA          PIC 9(10).
+           05  CDA-WALLET-ADDR         PIC X(42).
+           05  CDA-TOKEN-BAL           PIC S9(13)V99 COMP-3.
+           05  CDA-PENDING-AMT         PIC S9(13)V99 COMP-3.
+           05  CDA-LAST-TX-HASH        PIC X(66).
+      * Bank Deposit Account - omnibus reserve behind every token
+       01  BDA-MASTER-REC.
+           05  BDA-ACCT-NO             PIC 9(10).
+           05  BDA-LEDGER-BAL          PIC S9(13)V99 COMP-3.`, { decl: true }),
+    B('1000-READ-POSITIONS', 'COBOL', 2, 'DDA · CDA · BDA reads', `
+       1000-READ-POSITIONS.
+           IF WS-TDN-ACTION = 'MINT'
+              MOVE WS-SRC-ACCT TO DDA-ACCT-NO                         ⟦if=a_MINT⟧
+              EXEC CICS READ FILE('IDSDDAM') INTO(DDA-MASTER-REC)    ⟦if=a_MINT⟧
+                   RIDFLD(DDA-KEY) UPDATE END-EXEC                    ⟦if=a_MINT; set=DDA-LEDGER-BAL^{{ddabal}}; log=IDS1000I READ UPDATE DDA {{acct}}⟧
+      *       Find the customer's CDA through the alternate index
+              EXEC CICS READ FILE('TDNCDAX') INTO(CDA-MASTER-REC)    ⟦if=a_MINT⟧
+                   RIDFLD(DDA-ACCT-NO) UPDATE RESP(WS-RESP) END-EXEC  ⟦if=a_MINT⟧
+              IF WS-RESP = DFHRESP(NOTFND)                            ⟦if=a_MINT⟧
+                 EXEC CICS LINK PROGRAM('TDNONBD1')                   ⟦if=newcda; log=~TDN1100W NO CDA - ONBOARDING CUSTODY ACCOUNT {{cdaacct}}⟧
+                      COMMAREA(TDN-ONBOARD-AREA) END-EXEC             ⟦if=newcda; set=CDA-ACCT-NO^{{cdaacct}}~CDA-WALLET-ADDR^'{{wallet}}'⟧
+              END-IF                                                  ⟦if=a_MINT⟧
+           ELSE                                                       ⟦unless=a_MINT⟧
+              MOVE WS-SRC-ACCT TO CDA-ACCT-NO                         ⟦unless=a_MINT⟧
+              EXEC CICS READ FILE('TDNCDAM') INTO(CDA-MASTER-REC)    ⟦unless=a_MINT⟧
+                   RIDFLD(CDA-ACCT-NO) UPDATE END-EXEC                ⟦unless=a_MINT; set=CDA-TOKEN-BAL^{{cdabal}}; log=TDN1000I READ UPDATE CDA {{acct}}⟧
+              IF WS-TDN-ACTION = 'BURN'                               ⟦unless=a_MINT⟧
+                 MOVE CDA-LINKED-DDA TO DDA-ACCT-NO                   ⟦if=a_BURN⟧
+                 EXEC CICS READ FILE('IDSDDAM') INTO(DDA-MASTER-REC) ⟦if=a_BURN⟧
+                      RIDFLD(DDA-KEY) UPDATE END-EXEC                 ⟦if=a_BURN; set=DDA-LEDGER-BAL^{{ddabal}}⟧
+              END-IF                                                  ⟦unless=a_MINT⟧
+              IF WS-TDN-ACTION = 'XFER'                               ⟦unless=a_MINT⟧
+                 EXEC CICS READ FILE('TDNCDAM') INTO(DST-CDA-REC)    ⟦if=a_XFER⟧
+                      RIDFLD(WS-DST-CDA) UPDATE END-EXEC              ⟦if=a_XFER; set=DST-CDA-TOKEN-BAL^{{cda2bal}}⟧
+              END-IF                                                  ⟦unless=a_MINT⟧
+           END-IF
+           IF WS-TDN-ACTION NOT = 'XFER'
+              EXEC CICS READ FILE('TDNBDAM') INTO(BDA-MASTER-REC)    ⟦unless=a_XFER⟧
+                   RIDFLD(BDA-ACCT-NO) UPDATE END-EXEC                ⟦unless=a_XFER; set=BDA-LEDGER-BAL^{{bdabal}}⟧
+           END-IF.`),
+    B('2000-VALIDATE', 'COBOL', 1, 'funds and token checks', `
+       2000-VALIDATE.
+           IF WS-TDN-AMT NOT > ZERO
+              SET WS-ERROR-FOUND TO TRUE                              ⟦if=badamt; log=!TDN2001E AMOUNT MUST BE > 0⟧
+              GO TO 2000-EXIT                                         ⟦if=badamt⟧
+           END-IF                                                     ⟦unless=badamt⟧
+           EVALUATE WS-TDN-ACTION                                     ⟦if=ev⟧
+             WHEN 'MINT'                                              ⟦if=a_MINT&ev⟧
+      *        Tokens are issued only against collected funds - no OD
+               IF NOT DDA-ACTIVE OR                                   ⟦if=a_MINT&ev⟧
+                  DDA-LEDGER-BAL - DDA-HOLD-AMT < WS-TDN-AMT          ⟦if=a_MINT&ev⟧
+                  SET WS-ERROR-FOUND TO TRUE                          ⟦if=a_MINT&err&ev; log=!{{errmsg}}⟧
+               END-IF                                                 ⟦if=a_MINT&ev⟧
+             WHEN 'BURN'                                              ⟦if=a_BURN&ev⟧
+               IF CDA-TOKEN-BAL < WS-TDN-AMT OR DDA-CLOSED            ⟦if=a_BURN&ev⟧
+                  SET WS-ERROR-FOUND TO TRUE                          ⟦if=a_BURN&err&ev; log=!{{errmsg}}⟧
+               END-IF                                                 ⟦if=a_BURN&ev⟧
+             WHEN 'XFER'                                              ⟦if=a_XFER&ev⟧
+               IF WS-DST-CDA = WS-SRC-ACCT OR                         ⟦if=a_XFER&ev⟧
+                  CDA-TOKEN-BAL < WS-TDN-AMT                          ⟦if=a_XFER&ev⟧
+                  SET WS-ERROR-FOUND TO TRUE                          ⟦if=a_XFER&err&ev; log=!{{errmsg}}⟧
+               END-IF                                                 ⟦if=a_XFER&ev⟧
+           END-EVALUATE.                                              ⟦if=ev⟧
+       2000-EXIT.
+           EXIT.`),
+    B('3000-CORE-POSTINGS', 'COBOL', 2, 'fiat side first on MINT', `
+       3000-CORE-POSTINGS.
+           EVALUATE WS-TDN-ACTION
+             WHEN 'MINT'                                              ⟦if=a_MINT⟧
+               SUBTRACT WS-TDN-AMT FROM DDA-LEDGER-BAL                ⟦if=a_MINT; set=DDA-LEDGER-BAL^{{ddanew}}; log=IDS0427I DR DDA {{acct}} {{amtc}}⟧
+               ADD      WS-TDN-AMT TO   BDA-LEDGER-BAL                ⟦if=a_MINT; set=BDA-LEDGER-BAL^{{bdanew}}; log=TDN3001I CR BDA 9000000001 {{amtc}} TOKEN RESERVE⟧
+               MOVE     WS-TDN-AMT TO   CDA-PENDING-AMT               ⟦if=a_MINT; set=CDA-PENDING-AMT^{{amt}}⟧
+             WHEN 'BURN'                                              ⟦if=a_BURN⟧
+      *        Tokens leave first; cash is released after the burn
+               SUBTRACT WS-TDN-AMT FROM CDA-TOKEN-BAL                 ⟦if=a_BURN; set=CDA-TOKEN-BAL^{{cdanew}}⟧
+               MOVE     WS-TDN-AMT TO   CDA-PENDING-AMT               ⟦if=a_BURN; set=CDA-PENDING-AMT^{{amt}}⟧
+             WHEN 'XFER'                                              ⟦if=a_XFER⟧
+               SUBTRACT WS-TDN-AMT FROM CDA-TOKEN-BAL                 ⟦if=a_XFER; set=CDA-TOKEN-BAL^{{cdanew}}⟧
+               MOVE     WS-TDN-AMT TO   CDA-PENDING-AMT               ⟦if=a_XFER; set=CDA-PENDING-AMT^{{amt}}⟧
+           END-EVALUATE
+           EXEC CICS REWRITE FILE('TDNCDAM') FROM(CDA-MASTER-REC)
+                END-EXEC.`, { unless: 'err' }),
+    B('4000-CALL-TDN-GATEWAY', 'COBOL', 3, 'IBM MQ request / reply', `
+       4000-CALL-TDN-GATEWAY.
+           MOVE 'TDN.{{action}}.REQUEST' TO MQOD-OBJECTNAME
+           MOVE '{{ref}}'               TO WS-TDN-REF                 ⟦set=WS-TDN-REF^'{{ref}}'⟧
+           STRING '{"op":"{{actionl}}","amount":"{{amt}}",'
+                  '"wallet":"' CDA-WALLET-ADDR '",'
+                  '"ref":"' WS-TDN-REF '"}'
+                  DELIMITED BY SIZE INTO WS-MQ-MSG
+           CALL 'MQPUT1' USING WS-HCONN MQOD MQMD MQPMO
+                WS-MQ-LEN WS-MQ-MSG WS-COMPCODE WS-REASON             ⟦log=TDN4000I MQPUT1 TDN.{{action}}.REQUEST REF {{ref}}⟧
+      *    Wait up to 5 seconds for the gateway's reply
+           MOVE MQMD-MSGID TO MQMD-CORRELID
+           MOVE 5000       TO MQGMO-WAITINTERVAL
+           CALL 'MQGET' USING WS-HCONN WS-HOBJ-REPLY MQMD MQGMO
+                WS-REPLY-LEN WS-REPLY-MSG WS-REPLY-DATALEN
+                WS-COMPCODE WS-REASON                                 ⟦set=WS-TX-HASH^'{{txs}}'; log=TDN4010I REPLY RECEIVED - STATUS CONFIRMED⟧`, { unless: 'err' }),
+    B('TDN adapter → tdUSD token contract', 'JSON', 3, 'permissioned EVM network', `
+{ "from": "TDN.{{action}}.REQUEST", "ref": "{{ref}}",
+  "contract": "tdUSD @ 0x5dE9…0A11  (AriesGate demo TDN)",
+  "call": "{{call}}",
+  "signer": "bank issuer key in HSM (role: MINTER/BURNER)" }
+--> receipt
+{ "status": "0x1", "blockNumber": {{block}},
+  "txHash": "{{txs}}", "finality": "instant (BFT)" }`, { unless: 'err', decl: true, declLog: 'TDN4500I {{call}} -> BLOCK {{block}}' }),
+    B('5000-CONFIRM-AND-RECON', 'COBOL', 4, 'settle + reserve check', `
+       5000-CONFIRM-AND-RECON.
+           EVALUATE WS-TDN-ACTION
+             WHEN 'MINT'                                              ⟦if=a_MINT⟧
+               ADD CDA-PENDING-AMT TO CDA-TOKEN-BAL                   ⟦if=a_MINT; set=CDA-TOKEN-BAL^{{cdanew}}; log=TDN5000I CDA {{cdaacct}} +{{amtc}} tdUSD⟧
+             WHEN 'BURN'                                              ⟦if=a_BURN⟧
+               SUBTRACT WS-TDN-AMT FROM BDA-LEDGER-BAL                ⟦if=a_BURN; set=BDA-LEDGER-BAL^{{bdanew}}; log=TDN5001I DR BDA 9000000001 {{amtc}}⟧
+               ADD      WS-TDN-AMT TO   DDA-LEDGER-BAL                ⟦if=a_BURN; set=DDA-LEDGER-BAL^{{ddanew}}; log=IDS0527I CR DDA {{dda}} {{amtc}}⟧
+             WHEN 'XFER'                                              ⟦if=a_XFER⟧
+               ADD WS-TDN-AMT TO DST-CDA-TOKEN-BAL                    ⟦if=a_XFER; set=DST-CDA-TOKEN-BAL^{{cda2new}}; log=TDN5002I CDA {{cdaTo}} +{{amtc}} tdUSD⟧
+           END-EVALUATE
+           MOVE ZERO       TO CDA-PENDING-AMT                         ⟦set=CDA-PENDING-AMT^0.00⟧
+           MOVE WS-TX-HASH TO CDA-LAST-TX-HASH
+      *    Reserve rule: BDA balance must equal tdUSD in circulation
+           CALL 'TDNSUPLY' USING WS-TOTAL-SUPPLY                      ⟦set=WS-TOTAL-SUPPLY^{{supply}}⟧
+           IF BDA-LEDGER-BAL NOT = WS-TOTAL-SUPPLY
+              EXEC CICS WRITEQ TD QUEUE('RECN') FROM(RECON-ALERT)    ⟦if=never⟧
+                   END-EXEC                                           ⟦if=never⟧
+           END-IF                                                     ⟦log=TDN5100I RESERVE OK - BDA {{bdanewc}} = SUPPLY {{supplyc}}⟧`, { unless: 'err' }),
+    B('9000-SEND-RESPONSE', 'COBOL', 4, 'commit or roll back', `
+       9000-SEND-RESPONSE.
+           IF WS-ERROR-FOUND
+              EXEC CICS SYNCPOINT ROLLBACK END-EXEC                   ⟦if=err; log=!DFHSP ROLLBACK - NO TOKENS, NO POSTINGS⟧
+           ELSE                                                       ⟦unless=err⟧
+              EXEC CICS SYNCPOINT END-EXEC                            ⟦unless=err; log=DFHSP SYNCPOINT - LEDGERS MATCH THE CHAIN⟧
+           END-IF
+           MOVE WS-MSG TO MSGO                                        ⟦set=MSGO^'{{msg}}'⟧
+           EXEC CICS SEND MAP('ITK1MAP') MAPSET('ITK1SET')
+                FROM(ITK1MAPO) DATAONLY END-EXEC
+           EXEC CICS RETURN TRANSID('ITK1') END-EXEC.`)
+  ]
+});
+
+/* ── 4. Payments orchestrator + APIM ──────────── */
+const PARTNERS = { northwind: { name: 'Northwind Payroll', sub: 'sub-northwind-prod', app: 'payroll-disburse' }, bluefin: { name: 'Bluefin Wallet', sub: 'sub-bluefin-prod', app: 'p2p-cashout' }, harbor: { name: 'Harbor Treasury', sub: 'sub-harbor-prod', app: 'b2b-treasury' } };
+const RAILS = { RTP: { name: 'RTP network', cap: 25000, instant: 1 }, FEDNOW: { name: 'FedNow Service', cap: 25000, instant: 1 }, ACH: { name: 'ACH (next window)', cap: 100000 }, WIRE: { name: 'Fedwire Funds', cap: 1000000 } };
+function nachaEntry(name, amt, trace) {
+  return '6' + '22' + '04400002' + '6' + pad('00009876546621', 17) + lpad(Math.round(amt * 100), 10, '0') + pad('AGD' + trace, 15) + pad(name.toUpperCase(), 22) + '  ' + '0' + '09999999' + lpad(trace, 7, '0');
+}
+SC.push({
+  id: 'apim', tab: 'Orchestrator + APIM', tran: 'API', prog: 'PAYPOST1',
+  blurb: 'An outside <b>third party</b> calls the bank through <b>Azure API Management</b>. APIM checks the OAuth token and rate limit, the <b>payments orchestrator</b> screens and routes, then Hogan posts the debit over MQ and the orchestrator sends it to the rail. Try an expired token, a creditor named <b>Acme Shell Co</b> (sanctions hit), or more than $25,000 on an instant rail.',
+  flow: [['Third party', 'partner app'], ['Azure APIM', 'gateway + policy'], ['Orchestrator', 'screen · route'], ['Hogan IDS', 'CICS PAYPOST1'], ['Rail', 'RTP · FedNow · ACH · Wire']],
+  fields: [
+    { id: 'partner', label: 'Third-party partner', type: 'select', options: () => Object.entries(PARTNERS).map(([k, p]) => [k, p.name]) },
+    { id: 'op', label: 'API call', type: 'select', options: () => [['PAY', 'POST credit transfer'], ['BAL', 'GET account balance']] },
+    { id: 'rail', label: 'Rail', type: 'select', options: () => Object.entries(RAILS).map(([k, r]) => [k, `${k} · ${r.name}`]), show: v => v.op === 'PAY' },
+    { id: 'dda', label: 'Debtor DDA', type: 'select', options: ddaOpts, value: '1000200037' },
+    { id: 'amt', label: 'Amount (USD)', type: 'text', value: '1250.00', inputmode: 'decimal', show: v => v.op === 'PAY' },
+    { id: 'cpty', label: 'Creditor name', type: 'text', value: 'Columbus Supply Co', show: v => v.op === 'PAY' },
+    { id: 'badtoken', label: 'Token', type: 'check', text: 'Simulate an expired OAuth token', full: 1 }
+  ],
+  prep(v) {
+    const p = PARTNERS[v.partner], d = S.dda[v.dda], rail = RAILS[v.rail] || RAILS.RTP, amt = num(v.amt), f = { ['op_' + v.op]: 1, ['r_' + v.rail]: 1 };
+    const A = isNaN(amt) ? 0 : amt;
+    f.iso = v.rail !== 'ACH'; f.badtoken = !!v.badtoken;
+    f.errApim = f.badtoken;
+    if (!f.errApim && f.op_PAY) {
+      f.badamt = isNaN(amt) || amt <= 0;
+      f.overlimit = !f.badamt && A > rail.cap;
+      f.sanctions = !f.badamt && !f.overlimit && /acme\s*shell|blocked/i.test(v.cpty || '');
+      f.errOrch = f.badamt || f.overlimit || f.sanctions;
+      if (!f.errOrch) { f.frz = d.status !== 'A'; f.nsf = !f.frz && A > avail(d); f.errCore = f.frz || f.nsf; }
+    }
+    f.err = f.errApim || f.errOrch || f.errCore;
+    const corr = hex(4) + '-' + hex(2) + '-' + hex(2), idem = 'idem-' + hex(6), msgid = 'AGD' + ymd(now()) + lpad(nextSeq(), 8, '0'), e2e = 'E2E' + hex(5).toUpperCase(), pid = 'pmt_' + hex(6);
+    const errmsg = f.badamt ? 'ORC4220E AMOUNT MUST BE > 0' : f.overlimit ? `ORC4221E ${fmt(A)} OVER ${v.rail} DEMO CAP ${fmt(rail.cap)}` : f.frz ? `PAY4220E DDA ${v.dda} ${STAT[d.status].toUpperCase()}` : f.nsf ? `PAY4221E NSF - AVAILABLE ${fmt(avail(d))}` : '';
+    let http, body, res;
+    if (f.errApim) { http = '401 Unauthorized'; body = '{ "statusCode": 401, "message": "Unauthorized. Access token is missing or invalid." }'; res = { ok: false, title: 'Stopped at APIM', msg: '401 · validate-jwt failed, the request never reached the bank' }; }
+    else if (f.op_BAL) { http = '200 OK'; body = `{ "accountId": "${v.dda}", "available": "${plain(avail(d))}", "ledger": "${plain(d.ledger)}", "currency": "USD" }`; res = { ok: true, title: 'Balance returned', msg: `200 · ${v.dda} available ${fmt(avail(d))}` }; }
+    else if (f.sanctions) { http = '202 Accepted'; body = `{ "paymentId": "${pid}", "status": "PENDING_REVIEW", "reason": "sanctions screening" }`; res = { ok: true, warn: true, title: 'Held for compliance review', msg: `202 · orchestrator matched "${v.cpty}" on the demo watch list; no money moved` }; }
+    else if (f.errOrch || f.errCore) { http = '422 Unprocessable Content'; body = `{ "paymentId": "${pid}", "status": "RJCT", "reason": "${errmsg}" }`; res = { ok: false, title: f.errOrch ? 'Rejected by orchestrator' : 'Rejected by Hogan', msg: `422 · ${errmsg}` }; }
+    else if (v.rail === 'ACH') { http = '202 Accepted'; body = `{ "paymentId": "${pid}", "status": "ACCP", "rail": "ACH", "settles": "next ACH window" }`; res = { ok: true, title: 'Debited, queued for ACH', msg: `202 · ${fmt(A)} debited from ${v.dda}; entry rides the next ACH file` }; }
+    else { http = '201 Created'; body = `{ "paymentId": "${pid}", "status": "ACSC", "rail": "${v.rail}", "endToEndId": "${e2e}" }`; res = { ok: true, title: 'Payment settled', msg: `201 · ${fmt(A)} sent over ${rail.name}, pacs.002 ACSC` }; }
+    return {
+      f, msg: res.msg, errmsg, partner: p.name, partnerid: p.sub, app: p.app, rail: v.rail, railname: rail.name, cap: plain(rail.cap), capc: fmt(rail.cap), dda: v.dda, dname: d.name,
+      amt: plain(A), amtc: fmt(A), amtplain: plain(A), cpty: (v.cpty || '').slice(0, 35), corr, idem, msgid, e2e, pid,
+      tokstate: f.badtoken ? '  (exp passed 41 min ago)' : '', http, body, isodt: new Date().toISOString().slice(0, 19),
+      ddabal: plain(d.ledger), avail: plain(avail(d)), availc: fmt(avail(d)), ddanew: plain(d.ledger - A),
+      limitres: f.overlimit ? 'OVER CAP' : 'within cap', screenres: f.sanctions ? 'HIT (demo watch list)' : 'clear', fraud: 7 + (A > 10000 ? 21 : 5),
+      nacha: nachaEntry(v.cpty || 'CREDITOR', A, nextSeq()),
+      result: res,
+      apply() {
+        if (f.op_PAY && !f.err) { d.ledger = r2(d.ledger - A); S.seq += 1; S.journal.unshift({ ts: hms(now()), tran: 'APIM', acct: v.dda, desc: `${v.rail} to ${(v.cpty || '').toUpperCase()} · ${p.name}`, amt: -A }); return [v.dda]; }
+        if (f.sanctions) S.journal.unshift({ ts: hms(now()), tran: 'APIM', acct: v.dda, desc: `HELD · ${v.rail} to ${(v.cpty || '').toUpperCase()} (review)`, amt: null });
+        return [];
+      }
+    };
+  },
+  screen(v, c) {
+    const lines = [`<span class="h"> APIM TEST CONSOLE · ${esc(c.partner.toUpperCase())} (${c.partnerid})</span>`, ''];
+    if (v.op === 'BAL') lines.push(` <span class="u">GET</span>  /accounts/${v.dda}/balances`);
+    else lines.push(` <span class="u">POST</span> /payments/v1/credit-transfers`);
+    lines.push(` Authorization: Bearer eyJhbGciOiJSUzI1NiIs…${c.f.badtoken ? '  <span class="e">(expired)</span>' : '  (valid · scp payments.write)'}`);
+    lines.push(` Ocp-Apim-Subscription-Key: ••••••••${c.partnerid.slice(-4)}`);
+    if (v.op === 'PAY') {
+      lines.push(` Idempotency-Key: ${c.idem}`, '');
+      lines.push(` rail ......... <span class="u">${v.rail}</span>   (${c.railname}, demo cap ${c.capc})`);
+      lines.push(` debtor ....... <span class="u">${v.dda}</span>   ${esc(c.dname)}`);
+      lines.push(` amount ....... <span class="u">${esc(v.amt || '')}</span> USD`);
+      lines.push(` creditor ..... <span class="u">${esc(v.cpty || '')}</span>   acct ****6621`);
+    } else lines.push('', ` debtor ....... <span class="u">${v.dda}</span>   ${esc(c.dname)}`);
+    lines.push('');
+    lines.push(c.done ? ` <span class="${c.f.err && !c.f.sanctions ? 'e' : 'h'}">HTTP/1.1 ${esc(c.http)}</span>` : ' ');
+    return lines.join('\n');
+  },
+  blocks: () => [
+    B('Partner request (HTTPS)', 'HTTP', 0, 'third party → APIM', `
+# {{partner}} · app {{app}}
+POST /payments/v1/credit-transfers HTTP/1.1                         ⟦if=op_PAY⟧
+GET /accounts/{{dda}}/balances HTTP/1.1                             ⟦if=op_BAL; log=APIM  {{partnerid}} REQUEST RECEIVED⟧
+Host: api.agdemobank.example
+Authorization: Bearer eyJhbGciOiJSUzI1NiIs…{{tokstate}}
+Ocp-Apim-Subscription-Key: ••••••••••••
+Idempotency-Key: {{idem}}                                           ⟦if=op_PAY⟧
+Content-Type: application/json                                      ⟦if=op_PAY⟧
+{ "rail": "{{rail}}", "debtorAccount": "{{dda}}",                    ⟦if=op_PAY⟧
+  "amount": { "value": "{{amt}}", "currency": "USD" },              ⟦if=op_PAY⟧
+  "creditor": { "name": "{{cpty}}", "account": "****6621" } }       ⟦if=op_PAY; log=APIM  {{partnerid}} REQUEST RECEIVED⟧`),
+    B('APIM inbound policy', 'XML', 1, 'Azure API Management', `
+<policies>
+  <inbound>
+    <base />
+    <validate-jwt header-name="Authorization" failed-validation-httpcode="401">
+      <openid-config url="https://login.microsoftonline.com/{tenant-id}/v2.0/.well-known/openid-configuration" />
+      <required-claims>
+        <claim name="scp" match="any"><value>payments.write</value></claim>
+      </required-claims>
+    </validate-jwt>                                                   ⟦logif=badtoken; log=!APIM  401 validate-jwt FAILED - TOKEN EXPIRED⟧
+    <rate-limit-by-key calls="100" renewal-period="60"                ⟦unless=badtoken⟧
+        counter-key="@(context.Subscription.Id)" />                   ⟦unless=badtoken; log=APIM  JWT OK · RATE 1/100 PER 60s⟧
+    <set-header name="X-Correlation-Id" exists-action="skip">         ⟦unless=badtoken⟧
+      <value>@(context.RequestId.ToString())</value>                  ⟦unless=badtoken; set=X-Correlation-Id^{{corr}}⟧
+    </set-header>                                                     ⟦unless=badtoken⟧
+    <set-backend-service backend-id="payments-orchestrator" />        ⟦unless=badtoken; log=APIM  ROUTED TO payments-orchestrator⟧
+  </inbound>
+  <outbound>
+    <base />
+    <set-header name="X-Powered-By" exists-action="delete" />
+  </outbound>
+</policies>`),
+    B('Payments orchestrator', 'YAML', 2, 'screen · limit · route', `
+# payments-orchestrator · correlation {{corr}}
+receive:     POST /credit-transfers from {{partnerid}}               ⟦if=op_PAY⟧
+receive:     GET  /balances from {{partnerid}}                       ⟦if=op_BAL⟧
+idempotency: {{idem}} not seen -> reserved                          ⟦if=op_PAY⟧
+validate:    amount {{amt}} > 0                                     ⟦if=op_PAY; logif=badamt; log=!{{errmsg}}⟧
+limits:      {{rail}} demo cap {{capc}} -> {{limitres}}             ⟦if=op_PAY&!badamt⟧
+  reject:    422 LIMIT_EXCEEDED                                     ⟦if=overlimit; log=!{{errmsg}}⟧
+screen:      sanctions on "{{cpty}}" -> {{screenres}}               ⟦if=op_PAY&!badamt&!overlimit⟧
+  hold:      202 PENDING_REVIEW, compliance queue                   ⟦if=sanctions; log=~ORC3000W SANCTIONS HIT - HELD FOR REVIEW⟧
+fraud:       score {{fraud}}/100 -> allow                           ⟦if=op_PAY&!errOrch⟧
+build:       pacs.008.001.08  msgId {{msgid}}                       ⟦if=op_PAY&iso&!errOrch⟧
+build:       NACHA entry detail, SEC CCD                            ⟦if=op_PAY&r_ACH&!errOrch⟧
+core:        MQPUT HOGAN.PAY.REQ -> CICS PAYPOST1 (z/OS)            ⟦unless=errOrch; log=ORC2000I MQPUT HOGAN.PAY.REQ CORR {{corr}}⟧`, { unless: 'errApim' }),
+    B('PAYPOST1 · Hogan posting', 'COBOL', 3, 'CICS · MQ-triggered', `
+      *-----------------------------------------------------------*
+      * PAYPOST1  EXTERNAL PAYMENT POST / BALANCE INQUIRY           *
+      *           started by the CICS MQ trigger on HOGAN.PAY.REQ   *
+      *-----------------------------------------------------------*
+       0000-MAINLINE.
+           CALL 'MQGET' USING WS-HCONN WS-HOBJ-REQ MQMD MQGMO
+                WS-BUF-LEN PAY-REQUEST WS-DATA-LEN
+                WS-COMPCODE WS-REASON                                 ⟦set=PAY-CORR-ID^'{{corr}}'; log=PAY1000I MQGET HOGAN.PAY.REQ OK⟧
+           MOVE PAY-DEBTOR-ACCT TO DDA-ACCT-NO       *> {{dda}}
+           EXEC CICS READ FILE('IDSDDAM') INTO(DDA-MASTER-REC)
+                RIDFLD(DDA-KEY) UPDATE RESP(WS-RESP) END-EXEC         ⟦set=DDA-LEDGER-BAL^{{ddabal}}⟧
+           IF PAY-OP-INQUIRY
+              COMPUTE PAY-AVAIL-BAL = DDA-LEDGER-BAL - DDA-HOLD-AMT   ⟦if=op_BAL; set=PAY-AVAIL-BAL^{{avail}}⟧
+              MOVE 'BAL0000I' TO PAY-RESULT-CODE                      ⟦if=op_BAL; log=BAL0000I {{dda}} AVAILABLE {{availc}}⟧
+              PERFORM 8000-PUT-REPLY                                  ⟦if=op_BAL⟧
+              EXEC CICS RETURN END-EXEC                               ⟦if=op_BAL⟧
+           END-IF                                                     ⟦if=op_PAY⟧
+           IF NOT DDA-ACTIVE OR                                       ⟦if=op_PAY⟧
+              PAY-AMOUNT > DDA-LEDGER-BAL - DDA-HOLD-AMT              ⟦if=op_PAY⟧
+              MOVE 'PAY4220E' TO PAY-RESULT-CODE                      ⟦if=errCore; log=!{{errmsg}}⟧
+              EXEC CICS SYNCPOINT ROLLBACK END-EXEC                   ⟦if=errCore⟧
+           ELSE                                                       ⟦if=op_PAY&!errCore⟧
+              SUBTRACT PAY-AMOUNT FROM DDA-LEDGER-BAL                 ⟦if=op_PAY&!errCore; set=DDA-LEDGER-BAL^{{ddanew}}⟧
+              EXEC CICS REWRITE FILE('IDSDDAM')                       ⟦if=op_PAY&!errCore⟧
+                   FROM(DDA-MASTER-REC) END-EXEC                      ⟦if=op_PAY&!errCore⟧
+              MOVE '0461' TO JRN-TRAN-CODE   *> external debit, {{rail}}  ⟦if=op_PAY&!errCore⟧
+              EXEC CICS WRITE FILE('IDSJRNL') FROM(JOURNAL-REC)       ⟦if=op_PAY&!errCore⟧
+                   RIDFLD(JRN-KEY) END-EXEC                           ⟦if=op_PAY&!errCore⟧
+              EXEC CICS SYNCPOINT END-EXEC                            ⟦if=op_PAY&!errCore; log=DFHSP SYNCPOINT - DEBIT COMMITTED⟧
+              MOVE 'PAY0000I' TO PAY-RESULT-CODE                      ⟦if=op_PAY&!errCore; log=PAY0000I DEBITED {{dda}} {{amtc}} FOR {{rail}}⟧
+           END-IF                                                     ⟦if=op_PAY⟧
+           PERFORM 8000-PUT-REPLY.                                    ⟦if=op_PAY⟧
+       8000-PUT-REPLY.
+           MOVE MQMD-MSGID TO MQMD-CORRELID
+           CALL 'MQPUT1' USING WS-HCONN MQOD-REPLY MQMD MQPMO
+                WS-REPLY-LEN PAY-REPLY WS-COMPCODE WS-REASON          ⟦log=PAY8000I REPLY PUT TO HOGAN.PAY.RPY⟧`, { unless: 'errApim|errOrch' }),
+    B('Orchestrator → rail', 'XML', 4, 'ISO 20022 / NACHA', `
+<!-- {{railname}} · pacs.008 FI-to-FI customer credit transfer -->    ⟦if=iso⟧
+<FIToFICstmrCdtTrf>                                                   ⟦if=iso⟧
+  <GrpHdr><MsgId>{{msgid}}</MsgId><CreDtTm>{{isodt}}</CreDtTm>         ⟦if=iso⟧
+    <NbOfTxs>1</NbOfTxs><SttlmInf><SttlmMtd>CLRG</SttlmMtd></SttlmInf></GrpHdr>  ⟦if=iso⟧
+  <CdtTrfTxInf>                                                       ⟦if=iso⟧
+    <PmtId><EndToEndId>{{e2e}}</EndToEndId></PmtId>                    ⟦if=iso⟧
+    <IntrBkSttlmAmt Ccy="USD">{{amtplain}}</IntrBkSttlmAmt>            ⟦if=iso⟧
+    <Dbtr><Nm>{{dname}}</Nm></Dbtr>                                   ⟦if=iso⟧
+    <Cdtr><Nm>{{cpty}}</Nm></Cdtr>                                    ⟦if=iso⟧
+  </CdtTrfTxInf>                                                      ⟦if=iso⟧
+</FIToFICstmrCdtTrf>                                                  ⟦if=iso; log=RAIL  {{rail}} pacs.008 SENT {{e2e}}⟧
+<Rpt>pacs.002 · TxSts = ACSC (settled)</Rpt>                          ⟦if=iso; log=RAIL  pacs.002 ACSC - SETTLED⟧
+<!-- ACH · NACHA entry detail record (94 chars), next file window --> ⟦if=r_ACH⟧
+{{nacha}}                                                             ⟦if=r_ACH; log=RAIL  ACH ENTRY ADDED TO NEXT FILE⟧`, { if: 'op_PAY&!err' }),
+    B('APIM response → partner', 'HTTP', 0, 'outbound policy applied', `
+# APIM <outbound>: strip internal headers, return to {{partner}}
+HTTP/1.1 {{http}}
+Content-Type: application/json
+X-Correlation-Id: {{corr}}
+{{body}}                                                              ⟦log=APIM  RESPONSE {{http}} TO {{partnerid}}⟧`)
+  ]
+});
+
+/* ════════════════ app state / rendering ════════════════ */
+let cur = SC[0], vals = {}, blocks = [], lineEls = [], blkEls = [], exec = null, pos = -1, timer = null, ctx = null, finished = false;
+
+function renderTabs() {
+  const t = $('#tabs'); t.innerHTML = '';
+  SC.forEach(s => {
+    const b = el('button', { class: 'tab' + (s === cur ? ' active' : ''), role: 'tab', 'aria-selected': s === cur, type: 'button' }, `${esc(s.tab)}<small>${s.tran} · ${s.prog}</small>`);
+    b.onclick = () => { if (s !== cur) { cur = s; vals = {}; setup(); } };
+    t.appendChild(b);
+  });
+}
+
+function fieldOptions(fd) { return typeof fd.options === 'function' ? fd.options(vals) : fd.options; }
+function renderForm() {
+  const form = $('#form'); form.innerHTML = '';
+  cur.fields.forEach(fd => {
+    if (vals[fd.id] === undefined) {
+      if (fd.type === 'select') { const o = fieldOptions(fd); vals[fd.id] = fd.value && o.some(x => x[0] === fd.value) ? fd.value : o[0][0]; }
+      else if (fd.type === 'check') vals[fd.id] = false;
+      else vals[fd.id] = fd.value || '';
+    }
+    const g = el('div', { class: 'ag-form-group' + (fd.full ? ' full' : ''), id: 'g_' + fd.id });
+    const id = 'f_' + fd.id;
+    if (fd.type === 'check') {
+      g.appendChild(el('span', { class: 'ag-label' }, esc(fd.label)));
+      const lab = el('label', { class: 'ag-checkbox-label' }); const cb = el('input', { type: 'checkbox', id }); cb.checked = !!vals[fd.id];
+      cb.onchange = () => { vals[fd.id] = cb.checked; changed(); }; lab.appendChild(cb); lab.appendChild(document.createTextNode(fd.text)); g.appendChild(lab);
+    } else {
+      g.appendChild(el('label', { class: 'ag-label', for: id, id: 'l_' + fd.id }, esc(fd.label)));
+      let inp;
+      if (fd.type === 'select') { inp = el('select', { class: 'ag-select', id }); }
+      else { inp = el('input', { class: 'ag-input', id, type: 'text', spellcheck: 'false' }); if (fd.inputmode) inp.setAttribute('inputmode', fd.inputmode); inp.value = vals[fd.id]; }
+      inp.addEventListener(fd.type === 'select' ? 'change' : 'input', () => { vals[fd.id] = inp.value; changed(fd.id); });
+      if (fd.type !== 'select') inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); run(); } });
+      g.appendChild(inp);
+      g.appendChild(el('div', { class: 'hint', id: 'h_' + fd.id }));
+    }
+    form.appendChild(g);
+  });
+  syncForm();
+}
+function syncForm() {
+  cur.fields.forEach(fd => {
+    const g = $('#g_' + fd.id); if (!g) return;
+    g.classList.toggle('hidden', !!fd.show && !fd.show(vals));
+    if (fd.labelFn) $('#l_' + fd.id).textContent = fd.labelFn(vals);
+    if (fd.type === 'select') {
+      const s = $('#f_' + fd.id), o = fieldOptions(fd);
+      if (!o.some(x => x[0] === vals[fd.id])) vals[fd.id] = (fd.value && o.some(x => x[0] === fd.value)) ? fd.value : o[0][0];
+      s.innerHTML = o.map(([k, l]) => `<option value="${esc(k)}"${k === vals[fd.id] ? ' selected' : ''}>${esc(l)}</option>`).join('');
+    }
+    const h = $('#h_' + fd.id); if (h) h.textContent = typeof fd.hint === 'function' ? (fd.hint(vals) || '') : (fd.hint || '');
+  });
+}
+function changed() { syncForm(); if (timer) stop(); resetTrace(); refresh(); }
+
+/* highlighting */
+const COB_KW = 'IDENTIFICATION|DIVISION|PROCEDURE|WORKING-STORAGE|SECTION|EXEC|CICS|END-EXEC|MOVE|TO|FROM|INTO|IF|ELSE|END-IF|EVALUATE|WHEN|END-EVALUATE|PERFORM|THRU|COMPUTE|ADD|SUBTRACT|SET|TRUE|NOT|AND|OR|GO|EXIT|CALL|USING|STRING|DELIMITED|BY|SIZE|RECEIVE|SEND|MAP|MAPSET|READ|REWRITE|WRITE|WRITEQ|TD|QUEUE|FILE|RIDFLD|UPDATE|TOKEN|RESP|LINK|PROGRAM|COMMAREA|RETURN|TRANSID|SYNCPOINT|ROLLBACK|DATAONLY|LENGTH|OF|PIC|VALUE|COMP-3|FUNCTION|NUMVAL|CURRENT-DATE|ZERO|SPACES|KEYLENGTH|DFHRESP|NOTFND|NORMAL|COPY';
+function hl(text, lang) {
+  let h = esc(text);
+  const V = s => s.replace(/\u0001/g, '<span class="v">').replace(/\u0002/g, '</span>');
+  if (isComment(text, lang)) return `<span class="cm">${V(h)}</span>`;
+  if (lang === 'COBOL') {
+    h = h.replace(new RegExp(`('[^']*')|(\\*&gt;.*$)|(?<![\\w-])(${COB_KW})(?![\\w-])|(?<![\\w-])(\\d[\\d.]*)(?![\\w])`, 'g'), (m, s, c, k, n) => s ? `<span class="s">${s}</span>` : c ? `<span class="cm">${c}</span>` : k ? `<span class="k">${k}</span>` : `<span class="nu">${n}</span>`);
+  } else if (lang === 'XML') {
+    h = h.replace(/(&lt;\/?[\w:.-]+)|("[^"]*")|(\/?&gt;)|(\s[\w:-]+)(?==)/g, (m, t, s, e, a) => t ? `<span class="tg">${t}</span>` : s ? `<span class="s">${s}</span>` : e ? `<span class="tg">${e}</span>` : `<span class="at">${a}</span>`);
+  } else if (lang === 'JCL') {
+    h = h.replace(/^(\/\/\S*)(\s+)(JOB|EXEC|DD)?/, (m, n, sp, k) => `<span class="tg">${n}</span>${sp}${k ? `<span class="k">${k}</span>` : ''}`).replace(/(DSN|DISP|PGM|PARM|SPACE|UNIT|COND|SYSOUT|CLASS|MSGCLASS)=/g, '<span class="at">$1</span>=').replace(/('[^']*')/g, '<span class="s">$1</span>');
+  } else {
+    h = h.replace(/("[^"]*")(\s*:)?|^(\s*[\w-]+:)|\b(GET|POST|HTTP\/1\.1|Host|Authorization|Content-Type)\b|(#.*$)/g, (m, s, colon, key, kw, c) => s ? (colon ? `<span class="at">${s}</span>${colon}` : `<span class="s">${s}</span>`) : key ? `<span class="at">${key}</span>` : kw ? `<span class="k">${kw}</span>` : `<span class="cm">${c}</span>`);
+  }
+  return V(h);
+}
+const fill = (t, c) => t.replace(/\{\{(\w+)\}\}/g, (m, k) => '\u0001' + (c[k] != null ? c[k] : '') + '\u0002');
+const fillPlain = (t, c) => t.replace(/\{\{(\w+)\}\}/g, (m, k) => (c[k] != null ? c[k] : ''));
+
+function renderCode() {
+  const box = $('#codescroll'); box.innerHTML = ''; lineEls = []; blkEls = [];
+  blocks.forEach((b, bi) => {
+    const d = el('div', { class: 'blk' });
+    d.appendChild(el('div', { class: 'blkhead' }, `<span class="step">${bi + 1}</span><span class="name">${esc(b.title)}</span><span class="where">${esc(b.where)}</span><span class="lang">${b.lang}</span>`));
+    const ls = el('div', { class: 'lines' }); const arr = [];
+    let seqno = 0;
+    b.lines.forEach((l, li) => {
+      seqno += 100;
+      const g = b.lang === 'COBOL' ? lpad(seqno, 6, '0') : String(li + 1);
+      const row = el('div', { class: 'ln' }, `<span class="g">${g}</span><span class="c"></span>`);
+      ls.appendChild(row); arr.push(row);
+    });
+    d.appendChild(ls); box.appendChild(d); blkEls.push(d); lineEls.push(arr);
+  });
+  paintCode();
+}
+function paintCode() {
+  blocks.forEach((b, bi) => b.lines.forEach((l, li) => { lineEls[bi][li].querySelector('.c').innerHTML = hl(fill(l.t, ctx), b.lang) || ' '; }));
+}
+function renderFlow(active = -1, visited = new Set(), failed = -1) {
+  const f = $('#flow'); f.innerHTML = '';
+  cur.flow.forEach(([n, s], i) => {
+    if (i) f.appendChild(el('div', { class: 'arrow' }));
+    f.appendChild(el('div', { class: 'node' + (i === failed ? ' failed' : i === active ? ' active' : visited.has(i) ? ' visited' : '') }, `${esc(n)}<small>${esc(s)}</small>`));
+  });
+}
+function renderScreen() { $('#screen').innerHTML = cur.screen(vals, ctx); }
+
+function renderLedger(touched = []) {
+  const T = new Set(touched);
+  let h = '<div class="subhead">DDA · demand deposit accounts (Hogan IDS)</div><div class="tablewrap"><table class="ag-table"><thead><tr><th>Account</th><th>Customer</th><th>St</th><th class="n">Ledger</th><th class="n">Available</th></tr></thead><tbody>';
+  for (const [k, a] of Object.entries(S.dda)) h += `<tr class="${T.has(k) ? 'flash' : ''}"><td class="mono">${k}</td><td>${esc(a.name)}</td><td><span class="ag-badge ${a.status === 'A' ? 'ag-badge--gray' : 'ag-badge--bad'}" title="${STAT[a.status]}">${a.status}</span></td><td class="n">${fmt(a.ledger)}</td><td class="n">${fmt(avail(a))}</td></tr>`;
+  h += '</tbody></table></div>';
+  h += '<div class="subhead">Tokenized deposit network</div><div class="tablewrap"><table class="ag-table"><thead><tr><th>Account</th><th>Holder</th><th>Wallet</th><th class="n">Balance</th></tr></thead><tbody>';
+  h += `<tr class="${T.has(S.bda.acct) ? 'flash' : ''}"><td class="mono">${S.bda.acct} <span class="ag-badge ag-badge--dark">BDA</span></td><td>${esc(S.bda.name)}</td><td class="mono">—</td><td class="n">${fmt(S.bda.ledger)} USD</td></tr>`;
+  for (const [k, c] of Object.entries(S.cda)) h += `<tr class="${T.has(k) ? 'flash' : ''}"><td class="mono">${k} <span class="ag-badge ag-badge--orange">CDA</span></td><td>${esc(c.name)}</td><td class="mono" title="${c.wallet}">${c.wallet.slice(0, 6)}…${c.wallet.slice(-4)}</td><td class="n">${fmt(c.tokens)} tdUSD</td></tr>`;
+  h += '</tbody></table></div>';
+  const sup = supply(), ok = Math.abs(sup - S.bda.ledger) < 0.005;
+  h += `<div class="recon">Reserve check: BDA <b>${fmt(S.bda.ledger)}</b> ${ok ? '=' : '≠'} tdUSD supply <b>${fmt(sup)}</b> <span class="ag-badge ${ok ? 'ag-badge--ok' : 'ag-badge--bad'}">${ok ? 'Fully backed' : 'Out of balance'}</span></div>`;
+  h += '<div class="subhead">Journal (this session)</div>';
+  if (!S.journal.length) h += '<div class="hint">Nothing posted yet. Run a scenario.</div>';
+  else { h += '<div class="tablewrap"><table class="ag-table"><thead><tr><th>Time</th><th>Tran</th><th>Account</th><th>What</th><th class="n">Amount</th></tr></thead><tbody>'; S.journal.slice(0, 12).forEach(j => { h += `<tr><td class="mono">${j.ts}</td><td class="mono">${j.tran}</td><td class="mono">${esc(j.acct)}</td><td>${esc(j.desc)}</td><td class="n">${j.amt == null ? '—' : fmt(j.amt)}</td></tr>`; }); h += '</tbody></table></div>'; }
+  $('#ledger').innerHTML = h;
+}
+
+function refresh() {
+  ctx = cur.prep(vals); ctx.done = false;
+  paintCode(); renderScreen();
+}
+
+function setup() {
+  stop(); renderTabs();
+  $('#blurb').innerHTML = cur.blurb;
+  $('#formTran').textContent = `TRAN ${cur.tran} · ${cur.prog}`;
+  $('#formBar').firstChild.textContent = cur.id === 'apim' ? 'Third-party API call' : 'Teller input';
+  $('#screenTitle').textContent = cur.id === 'apim' ? 'API request preview' : 'Teller screen (3270)';
+  $('#screenMeta').textContent = cur.id === 'apim' ? 'APIM developer portal' : 'LU AGDT0457';
+  $('#progName').textContent = cur.prog;
+  renderForm();
+  ctx = cur.prep(vals); ctx.done = false;
+  blocks = cur.blocks();
+  renderCode(); renderScreen(); resetTrace();
+}
+
+/* ════════════════ execution engine ════════════════ */
+function buildExec() {
+  const f = ctx.f, list = [];
+  blocks.forEach((b, bi) => {
+    if (!runs(b, f)) return;
+    if (b.decl) { list.push({ b: bi, l: -1 }); return; }
+    b.lines.forEach((l, li) => { if (!isComment(l.t, b.lang) && runs(l, f)) list.push({ b: bi, l: li }); });
+  });
+  return list;
+}
+function resetTrace() {
+  stop(); exec = null; pos = -1; finished = false;
+  document.querySelectorAll('.ln').forEach(e => e.className = 'ln');
+  blkEls.forEach(e => e.className = 'blk');
+  $('#watch').innerHTML = '<span class="empty">Values appear as lines execute.</span>';
+  $('#console').innerHTML = '<span class="empty">No output yet.</span>';
+  $('#prog').style.width = '0';
+  $('#codeMeta').textContent = 'waiting for Enter';
+  $('#result').className = 'result'; $('#result').innerHTML = '';
+  renderFlow();
+  if (ctx) { ctx.done = false; renderScreen(); }
+  $('#runBtn').disabled = false; $('#stepBtn').disabled = false;
+}
+function begin() {
+  ctx = cur.prep(vals); ctx.done = false; paintCode();
+  resetTrace();
+  exec = buildExec(); pos = -1; visited.clear();
+  $('#watch').innerHTML = ''; $('#console').innerHTML = '';
+  log(`DFHAC  TRAN ${cur.tran} STARTED · PROGRAM ${cur.prog} · ${cur.id === 'apim' ? 'MQ TRIGGER' : 'TERM AGDT0457'}`);
+}
+const visited = new Set();
+function log(m) {
+  const c = $('#console'); const kind = m[0] === '!' ? 'e' : m[0] === '~' ? 'w' : '';
+  if (kind) m = m.slice(1);
+  c.appendChild(el('div', { class: kind }, `<span class="ts">${hms(now())}</span> ${esc(m)}`));
+  c.scrollTop = c.scrollHeight;
+}
+function watch(spec) {
+  const w = $('#watch');
+  spec.split('~').forEach(p => {
+    const i = p.indexOf('^'); if (i < 0) return;
+    const k = p.slice(0, i).trim(), v = fillPlain(p.slice(i + 1), ctx);
+    let row = w.querySelector(`[data-k="${CSS.escape(k)}"]`);
+    if (!row) { row = el('div', { 'data-k': k }, `<span>${esc(k)}</span><span></span>`); w.appendChild(row); }
+    row.lastChild.textContent = v; row.classList.remove('new'); void row.offsetWidth; row.classList.add('new');
+  });
+  w.scrollTop = w.scrollHeight;
+}
+function scrollToLine(node) {
+  const box = $('#codescroll'), br = box.getBoundingClientRect(), r = node.getBoundingClientRect();
+  if (r.top < br.top + 30 || r.bottom > br.bottom - 30) box.scrollTop += (r.top - br.top) - box.clientHeight / 3;
+}
+function step() {
+  if (!exec) begin();
+  if (pos >= 0) {
+    const p = exec[pos];
+    if (p.l < 0) { blkEls[p.b].classList.remove('declcur'); lineEls[p.b].forEach(e => e.classList.add('done')); }
+    else { lineEls[p.b][p.l].classList.remove('cur'); lineEls[p.b][p.l].classList.add('done'); }
+  }
+  pos++;
+  if (pos >= exec.length) { finish(); return false; }
+  const p = exec[pos], b = blocks[p.b];
+  blkEls.forEach((e, i) => e.classList.toggle('activeb', i === p.b));
+  visited.add(b.node); renderFlow(b.node, visited);
+  if (p.l < 0) {
+    blkEls[p.b].classList.add('declcur'); scrollToLine(blkEls[p.b]);
+    if (b.declLog) log(fillPlain(b.declLog, ctx));
+  } else {
+    const l = b.lines[p.l], node = lineEls[p.b][p.l];
+    node.classList.add('cur'); scrollToLine(node);
+    if (l.set) watch(l.set);
+    if (l.log && (!l.logif || cond(l.logif, ctx.f))) log(fillPlain(l.log, ctx));
+  }
+  $('#prog').style.width = ((pos + 1) / exec.length * 100) + '%';
+  $('#codeMeta').textContent = `step ${pos + 1} / ${exec.length} · ${b.title.split(' ·')[0]}`;
+  return true;
+}
+function finish() {
+  stop(); finished = true;
+  // dim what never ran
+  const ran = new Set(exec.map(p => p.b + ':' + p.l));
+  blocks.forEach((b, bi) => {
+    const blockRan = exec.some(p => p.b === bi);
+    if (!blockRan) blkEls[bi].classList.add('skipped');
+    else if (!b.decl) b.lines.forEach((l, li) => { if (!isComment(l.t, b.lang) && !ran.has(bi + ':' + li)) lineEls[bi][li].classList.add('skip'); });
+  });
+  blkEls.forEach(e => e.classList.remove('activeb'));
+  const r = ctx.result;
+  let touched = [];
+  if (r.ok) touched = ctx.apply() || [];
+  save();
+  const lastNode = exec.length ? blocks[exec[exec.length - 1].b].node : -1;
+  renderFlow(-1, visited, r.ok ? -1 : lastNode);
+  ctx.done = true; renderScreen();
+  renderLedger(touched);
+  const res = $('#result');
+  res.className = 'result show ' + (r.ok ? (r.warn ? 'warn' : 'ok') : 'bad');
+  res.innerHTML = `<b>${r.ok ? (r.warn ? '⚠ ' : '✔ ') : '✖ '}${esc(r.title)}</b><br><code>${esc(r.msg)}</code>`;
+  log(r.ok ? `DFHAC  TRAN ${cur.tran} ENDED NORMALLY` : `!DFHAC  TRAN ${cur.tran} ENDED · ${r.msg}`);
+  $('#codeMeta').textContent = `${exec.length} lines ran · ${r.ok ? 'committed' : 'rolled back'}`;
+  $('#prog').style.width = '100%';
+  $('#runBtn').disabled = false; $('#stepBtn').disabled = false;
+  $('#runBtn').textContent = '▶ Submit again';
+}
+function stop() { if (timer) { clearTimeout(timer); timer = null; } }
+function run() {
+  if (timer) return;
+  begin();
+  $('#runBtn').textContent = '▶ Running…'; $('#runBtn').disabled = true;
+  const sp = +$('#speed').value;
+  if (sp === 0) { while (step()) {} return; }
+  const tick = () => { if (step()) timer = setTimeout(tick, +$('#speed').value || 1); };
+  tick();
+}
+
+$('#runBtn').onclick = run;
+$('#stepBtn').onclick = () => { if (finished) resetTrace(); if (!exec) { begin(); } step(); };
+$('#clearBtn').onclick = () => { resetTrace(); $('#runBtn').textContent = '▶ Submit (Enter)'; };
+$('#resetBtn').onclick = () => { S = JSON.parse(JSON.stringify(SEED)); save(); vals = {}; setup(); renderLedger(); };
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.tagName === 'SELECT') { e.preventDefault(); run(); } });
+
+/* clock */
+const tickClock = () => { $('#clock').innerHTML = `<b>${hms(now())}</b>`; };
+tickClock(); setInterval(tickClock, 1000);
+
+/* boot */
+setup(); renderLedger();
+
+/* splash: AriesGate, then app */
+const qs = new URLSearchParams(location.search);
+const ag = $('#agSplash'), app = $('#appSplash');
+function hideAll() { ag.classList.add('hide'); app.classList.add('hide'); setTimeout(() => { ag.remove(); app.remove(); }, 500); }
+if (qs.has('nosplash')) { ag.remove(); app.remove(); }
+else {
+  let t2;
+  const toApp = () => { ag.classList.add('hide'); app.style.display = 'flex'; t2 = setTimeout(hideAll, 1700); };
+  const t1 = setTimeout(toApp, 1700);
+  ag.onclick = () => { clearTimeout(t1); toApp(); };
+  app.onclick = () => { clearTimeout(t2); hideAll(); };
+}
+const pick = qs.get('s'); if (pick) { const s = SC.find(x => x.id === pick); if (s) { cur = s; vals = {}; setup(); } }
+
+window.__hogan = { SC, get S() { return S; }, get ctx() { return ctx; }, run, setVals(o) { Object.assign(vals, o); cur.fields.forEach(fd => { const e = $('#f_' + fd.id); if (e && o[fd.id] !== undefined) { if (fd.type === 'check') e.checked = !!o[fd.id]; else e.value = o[fd.id]; } }); changed(); }, select(id) { cur = SC.find(x => x.id === id); vals = {}; setup(); } };
+})();
+</script>
+</body>
+</html>
