@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#2A2A2A" />
+<title>TDN Flow + Treasury Center — AriesGate Tech</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='10' fill='%232A2A2A'/%3E%3Cpath d='M12 50 32 12 52 50Z' fill='%23E8520A'/%3E%3Ccircle cx='32' cy='40' r='7' fill='%23fff'/%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+/*
+VOICE   clear, technical, calm: a systems diagram a treasury architect would present
+IDEA    an operations wall: the live path of one token through every system, then the treasury desk
+PICTURE an animated swim-lane diagram where a packet travels APIM → core → GL → treasury
+COLOUR  AriesGate orange accent, structural greys, green for settled, amber for holds, red for rejects
+TYPE    Barlow Condensed headings, Barlow body, IBM Plex Mono for payloads
+*/
+:root{
+  --ag-orange:#E8520A;--ag-orange-dark:#C04008;--ag-orange-light:#FFF0E8;--ag-dark:#2A2A2A;--ag-gray-dark:#404040;
+  --ag-gray:#666;--ag-gray-mid:#AAA;--ag-gray-light:#F2F2F2;--ag-text:#1A1A1A;
+  --ok:#2E9E5B;--ok-l:#E7F5EC;--bad:#D23C2B;--bad-l:#FDECEA;--warn:#C98A00;--warn-l:#FFF5DC;--teal:#1F8A8A;
+  --font-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;--font-body:"Barlow",Arial,sans-serif;--font-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --radius:5px;--shadow:0 2px 8px rgba(0,0,0,.12);
+}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0}
+body{font-family:var(--font-body);color:var(--ag-text);background:var(--ag-gray-light);display:flex;flex-direction:column;min-height:100vh;overflow-x:clip}
+button,input,select{font:inherit}
+.ag-header,.subnav,.ag-footer{flex-shrink:0}
+
+/* splash */
+.splash{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .45s;cursor:pointer}
+.splash.hide{opacity:0;pointer-events:none}
+#agSplash{background:var(--ag-dark)}
+#agSplash img{width:min(260px,58vw);background:#F2F2F2;border-radius:50%;padding:18px;box-shadow:0 8px 28px rgba(0,0,0,.45)}
+.splash__bar{width:min(260px,60vw);height:4px;background:#555;border-radius:2px;margin-top:28px;overflow:hidden}
+.splash__bar i{display:block;height:100%;width:0;background:var(--ag-orange);animation:load 1.5s ease forwards}
+@keyframes load{to{width:100%}}
+.splash__tag{margin-top:14px;color:var(--ag-gray-mid);font-family:var(--font-display);letter-spacing:.2em;font-size:.85rem;text-transform:uppercase}
+#appSplash{background:#14171a;color:#fff}
+#appSplash .wrap{max-width:min(680px,90vw);text-align:center}
+#appSplash h1{font-family:var(--font-display);font-size:clamp(2rem,6.5vw,3.6rem);margin:0;line-height:1.05;letter-spacing:.04em}
+#appSplash h1 span{color:var(--ag-orange)}
+#appSplash p{color:#bbb;margin:.7rem 0 1.4rem}
+#appSplash svg{width:min(560px,86vw);height:auto}
+
+/* header */
+.ag-header{background:var(--ag-gray-dark);color:#fff;display:flex;align-items:center;gap:1rem;padding:.45rem 1.75rem;min-height:64px;flex-wrap:wrap}
+.ag-header__logo{height:48px;width:48px;background:#F2F2F2;border-radius:8px;padding:2px}
+.ag-header__divider{width:1px;height:34px;background:var(--ag-gray-mid);opacity:.6}
+.ag-header__title{font-family:var(--font-display);font-size:1.45rem;letter-spacing:.04em;line-height:1.1}
+.ag-header__subtitle{font-size:.82rem;color:var(--ag-gray-mid)}
+.subnav{background:var(--ag-dark);display:flex;gap:2px;padding:0 1.75rem;overflow-x:auto;scrollbar-width:none}
+.subnav a{color:#bbb;text-decoration:none;font-family:var(--font-display);text-transform:uppercase;letter-spacing:.05em;padding:.7rem 1rem;border-bottom:3px solid transparent;white-space:nowrap}
+.subnav a.on{color:#fff;border-bottom-color:var(--ag-orange)}
+.subnav a:hover{color:#fff}
+.subnav a:focus-visible{outline:2px solid var(--ag-orange);outline-offset:-2px}
+
+main{flex:1;padding:1rem 1.75rem 1.75rem;display:flex;flex-direction:column;gap:1rem}
+.grid{display:grid;grid-template-columns:330px minmax(0,1fr);gap:1rem;align-items:start}
+@media (max-width:1050px){.grid{grid-template-columns:1fr}}
+.card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.bar{background:var(--ag-orange);color:#fff;font-family:var(--font-display);font-size:1rem;letter-spacing:.08em;text-transform:uppercase;padding:.5rem 1rem;display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
+.bar--dark{background:var(--ag-gray-dark)}
+.bar .r{margin-left:auto;font-family:var(--font-mono);font-size:.72rem;letter-spacing:0;text-transform:none;opacity:.9}
+.body{padding:1rem;padding-top:1.12rem}
+.blurb{font-size:.9rem;color:var(--ag-gray);line-height:1.45;margin:0 0 .9rem}
+.blurb b{color:var(--ag-text)}
+.fg{display:flex;flex-direction:column;gap:.25rem;margin-bottom:.75rem}
+.fg.hidden{display:none}
+.lab{font-family:var(--font-display);font-size:.8rem;letter-spacing:.07em;text-transform:uppercase;color:var(--ag-gray)}
+.inp{border:1px solid #cfcfcf;border-radius:var(--radius);padding:.55rem .65rem;background:#fff;min-height:44px;width:100%;font-size:16px}
+.inp:focus{outline:none;border-color:var(--ag-orange);box-shadow:0 0 0 3px rgba(232,82,10,.18)}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid #cfcfcf;border-radius:var(--radius);overflow:hidden}
+.seg button{border:0;background:#fff;padding:.6rem .3rem;min-height:44px;font-family:var(--font-display);letter-spacing:.06em;text-transform:uppercase;cursor:pointer;color:var(--ag-gray-dark)}
+.seg button+button{border-left:1px solid #cfcfcf}
+.seg button.on{background:var(--ag-gray-dark);color:#fff}
+.seg button:focus-visible{outline:2px solid var(--ag-orange);outline-offset:-2px}
+.hint{font-size:.76rem;color:var(--ag-gray)}
+.btns{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.4rem}
+.btn{font-family:var(--font-display);letter-spacing:.07em;text-transform:uppercase;font-size:.95rem;border-radius:var(--radius);padding:.55rem 1rem;min-height:44px;cursor:pointer;border:2px solid transparent}
+.btn--p{background:var(--ag-orange);color:#fff}.btn--p:hover{background:var(--ag-orange-dark)}
+.btn--o{background:#fff;color:var(--ag-gray-dark);border-color:var(--ag-gray-dark)}.btn--o:hover{background:var(--ag-gray-light)}
+.btn--s{min-height:32px;padding:.2rem .6rem;font-size:.78rem}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn:focus-visible{box-shadow:0 0 0 3px rgba(232,82,10,.35);outline:none}
+.speedrow{display:flex;align-items:center;gap:.5rem;margin-top:.7rem;font-size:.85rem;color:var(--ag-gray)}
+.speedrow select{min-height:36px;width:auto;padding:.3rem .5rem;font-size:14px}
+.result{margin-top:.9rem;border-radius:var(--radius);padding:.65rem .8rem;font-size:.88rem;border-left:5px solid;display:none}
+.result.show{display:block}.result.ok{background:var(--ok-l);border-color:var(--ok)}.result.bad{background:var(--bad-l);border-color:var(--bad)}.result.warn{background:var(--warn-l);border-color:var(--warn)}
+.result b{font-family:var(--font-display);letter-spacing:.04em;font-size:1rem}
+.result code{font-family:var(--font-mono);font-size:.78rem;word-break:break-word}
+
+/* diagram */
+.diagwrap{overflow-x:auto;background:#fbfbfb}
+.swipe{display:none;font-size:.78rem;color:var(--ag-gray);padding:.35rem 1rem;background:#fbfbfb}
+@media (max-width:800px){.swipe{display:block}}
+#diag{display:block;width:100%;min-width:760px;height:auto}
+.band rect{fill:#f3f3f3}.band text{font:600 11px var(--font-display);letter-spacing:.12em;fill:#9a9a9a;text-transform:uppercase}
+.edge{fill:none;stroke:#cfcfcf;stroke-width:2}
+.edge.lit{stroke:var(--ag-orange);stroke-width:2.6}
+.edge.litret{stroke:var(--teal);stroke-width:2.6;stroke-dasharray:6 5}
+.edge.litbad{stroke:var(--bad);stroke-width:2.6}
+.edge.lithold{stroke:var(--warn);stroke-width:2.6}
+.node rect.box{fill:#fff;stroke:#cfcfcf;stroke-width:1.5;transition:all .25s}
+.node .t{font:700 15px var(--font-display);letter-spacing:.03em;fill:#222}
+.node .s{font:400 11px var(--font-body);fill:#888}
+.node .badge{font:700 11px var(--font-display);letter-spacing:.06em}
+.node.active rect.box{stroke:var(--ag-orange);stroke-width:3;filter:drop-shadow(0 0 6px rgba(232,82,10,.45))}
+.node.done rect.box{stroke:var(--ok);stroke-width:2}
+.node.hold rect.box{stroke:var(--warn);stroke-width:3;fill:#fffaf0}
+.node.fail rect.box{stroke:var(--bad);stroke-width:3;fill:#fff5f4}
+.node.dim{opacity:.4}
+.chip rect{fill:var(--ag-gray-light);stroke:#e0e0e0}
+.chip .cl{font:700 11px var(--font-display);letter-spacing:.08em;fill:#777}
+.chip .cv{font:600 13px var(--font-mono);fill:#222}
+.chip.bump rect{fill:var(--ag-orange-light);stroke:var(--ag-orange)}
+.pk circle{filter:drop-shadow(0 0 5px rgba(0,0,0,.25))}
+.pk text{font:600 11px var(--font-mono);paint-order:stroke;stroke:#fff;stroke-width:4px}
+.caption{display:flex;gap:.8rem;align-items:center;padding:.6rem 1rem;border-top:1px solid #eee;min-height:52px}
+.caption .num{font-family:var(--font-display);background:var(--ag-gray-dark);color:#fff;border-radius:3px;padding:.1rem .5rem;white-space:nowrap}
+.caption .txt{font-size:.95rem}
+.caption .ms{margin-left:auto;font-family:var(--font-mono);font-size:.75rem;color:var(--ag-gray);white-space:nowrap}
+.legend{display:flex;flex-wrap:wrap;gap:.9rem;padding:.4rem 1rem .7rem;font-size:.78rem;color:var(--ag-gray)}
+.legend i{display:inline-block;width:18px;height:3px;vertical-align:middle;margin-right:.35rem;border-radius:2px}
+
+.lower{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:1rem}
+@media (max-width:900px){.lower{grid-template-columns:1fr}}
+.tl{list-style:none;margin:0;padding:.4rem 0;max-height:420px;overflow:auto;position:relative}
+.tl li{display:flex;gap:.6rem;align-items:flex-start;padding:.45rem 1rem;border-left:3px solid transparent;cursor:default;font-size:.88rem}
+.tl li .n{font-family:var(--font-mono);font-size:.75rem;color:#999;width:1.7em;text-align:right;padding-top:.1rem}
+.tl li .d{flex:1}
+.tl li .d small{display:block;color:var(--ag-gray);font-size:.76rem}
+.tl li .st{font-family:var(--font-display);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;padding:.05rem .4rem;border-radius:3px;background:#eee;color:#777;white-space:nowrap}
+.tl li.done{cursor:pointer}.tl li.done:hover{background:var(--ag-gray-light)}
+.tl li.done .st{background:var(--ok-l);color:var(--ok)}
+.tl li.cur{border-left-color:var(--ag-orange);background:var(--ag-orange-light)}
+.tl li.cur .st{background:var(--ag-orange);color:#fff}
+.tl li.hold .st{background:var(--warn-l);color:var(--warn)}
+.tl li.fail .st{background:var(--bad-l);color:var(--bad)}
+.tl li.sel{outline:2px solid var(--ag-gray-dark);outline-offset:-2px}
+.code{background:#1c1c1c;color:#e4e4e4;font-family:var(--font-mono);font-size:12px;line-height:1.55;margin:0;padding:.8rem 1rem;overflow:auto;max-height:420px;min-height:220px;white-space:pre}
+.code .k{color:#FF9A5C}.code .s{color:#A8D88B}.code .cm{color:#7F8C7F;font-style:italic}.code .nu{color:#8FC7FF}.code .tg{color:#FF9A5C}.code .at{color:#E6C07B}
+.codehead{display:flex;gap:.5rem;align-items:center;background:#262626;color:#ddd;padding:.4rem 1rem;font-size:.8rem}
+.codehead .lang{margin-left:auto;font-family:var(--font-display);letter-spacing:.08em;font-size:.72rem;border:1px solid #555;border-radius:3px;padding:0 .35rem;color:#aaa}
+.copy{background:transparent;border:1px solid #555;color:#ddd;border-radius:3px;font:600 .72rem var(--font-display);letter-spacing:.06em;text-transform:uppercase;padding:.15rem .5rem;cursor:pointer;min-height:26px}
+
+/* treasury */
+#treasury{scroll-margin-top:10px}
+.tc-head{background:var(--ag-dark);color:#fff;border-radius:var(--radius) var(--radius) 0 0;padding:1rem 1.2rem;display:flex;align-items:flex-end;gap:1rem;flex-wrap:wrap;border-bottom:4px solid var(--ag-orange)}
+.tc-head h2{font-family:var(--font-display);font-size:clamp(1.6rem,3.2vw,2.3rem);margin:0;letter-spacing:.03em;line-height:1.05}
+.tc-head p{margin:.2rem 0 0;color:#bbb;font-size:.9rem}
+.tc-head .r{margin-left:auto;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+.tc{background:#fff;border-radius:0 0 var(--radius) var(--radius);box-shadow:var(--shadow);padding:1rem 1.2rem 1.3rem}
+.kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:.7rem}
+@media (max-width:1100px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:560px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{border:1px solid #e6e6e6;border-top:3px solid var(--ag-gray-mid);border-radius:var(--radius);padding:.6rem .7rem}
+.kpi .l{font-family:var(--font-display);text-transform:uppercase;letter-spacing:.06em;font-size:.76rem;color:var(--ag-gray)}
+.kpi .v{font-family:var(--font-display);font-size:clamp(1.25rem,2.2vw,1.65rem);line-height:1.15;white-space:nowrap}
+.kpi .sub{font-size:.75rem;color:var(--ag-gray)}
+.kpi.ok{border-top-color:var(--ok)}.kpi.warn{border-top-color:var(--warn)}.kpi.bad{border-top-color:var(--bad)}.kpi.acc{border-top-color:var(--ag-orange)}
+.tcgrid{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:1rem;margin-top:1rem}
+@media (max-width:950px){.tcgrid{grid-template-columns:1fr}}
+.panel{border:1px solid #e6e6e6;border-radius:var(--radius);overflow:hidden}
+.panel h3{margin:0;background:var(--ag-gray-dark);color:#fff;font-family:var(--font-display);font-weight:600;letter-spacing:.07em;text-transform:uppercase;font-size:.9rem;padding:.45rem .8rem;display:flex;gap:.5rem;align-items:center}
+.panel h3 .r{margin-left:auto;font-family:var(--font-body);text-transform:none;letter-spacing:0;font-size:.78rem;color:#ccc}
+.panel .in{padding:.7rem .8rem}
+.fig{position:relative;height:230px}
+.fig svg{position:absolute;inset:0;width:100%;height:100%}
+.leg{display:flex;gap:1rem;flex-wrap:wrap;font-size:.78rem;color:var(--ag-gray);margin-top:.4rem}
+.leg i{display:inline-block;width:14px;height:3px;margin-right:.3rem;vertical-align:middle}
+.meter{height:16px;background:#eee;border-radius:8px;position:relative;overflow:hidden;margin:.35rem 0 .2rem}
+.meter i{position:absolute;left:0;top:0;bottom:0;background:var(--ok);border-radius:8px;transition:width .6s}
+.meter b{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--bad)}
+.lrow{display:flex;justify-content:space-between;gap:.6rem;font-size:.85rem;padding:.25rem 0;border-bottom:1px dashed #eee}
+.lrow span:last-child{font-family:var(--font-mono);font-size:.8rem;white-space:nowrap}
+.tbl{width:100%;border-collapse:collapse;font-size:.83rem}
+.tbl th{background:#f3f3f3;text-align:left;font-family:var(--font-display);letter-spacing:.05em;text-transform:uppercase;font-size:.74rem;color:#555;padding:.35rem .5rem;font-weight:600}
+.tbl td{padding:.38rem .5rem;border-bottom:1px solid #eee;vertical-align:top}
+.tbl .n{text-align:right;font-family:var(--font-mono);font-size:.78rem;white-space:nowrap}
+.tbl .m{font-family:var(--font-mono);font-size:.76rem;white-space:nowrap}
+.tbl tr.flash td{animation:flash 1.8s ease}
+@keyframes flash{0%{background:#FFE0CC}100%{background:transparent}}
+.scroll{overflow-x:auto}
+.bdg{display:inline-block;font-family:var(--font-display);font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;padding:.08rem .45rem;border-radius:3px;white-space:nowrap}
+.b-ok{background:var(--ok);color:#fff}.b-warn{background:var(--warn);color:#fff}.b-bad{background:var(--bad);color:#fff}.b-gray{background:#ddd;color:#333}.b-dark{background:var(--ag-gray-dark);color:#fff}
+.tick{font-weight:700}.tick.y{color:var(--ok)}.tick.x{color:var(--bad)}
+.empty{color:#999;font-style:italic;font-size:.85rem;padding:.4rem 0}
+.je{border:1px solid #eee;border-radius:4px;margin-bottom:.6rem}
+.je summary{cursor:pointer;padding:.45rem .6rem;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;font-size:.85rem;list-style:none}
+.je summary::-webkit-details-marker{display:none}
+.je summary .m{font-family:var(--font-mono);font-size:.76rem}
+.je summary .amt{margin-left:auto;font-family:var(--font-mono);font-size:.8rem}
+.case{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;padding:.5rem 0;border-bottom:1px solid #eee;font-size:.85rem}
+.case .w{flex:1 1 180px}
+.case small{display:block;color:var(--ag-gray)}
+.stack3{display:grid;grid-template-columns:1fr;gap:1rem}
+@media (max-width:600px){.tbl{font-size:13px}.stk thead{display:none}.stk tr{display:grid;padding:.4rem 0;border-bottom:1px solid #eee}.stk td{display:flow-root;border:0;padding:2px 0;padding-inline-start:7.5em;text-align:start}.stk td::before{content:attr(data-l);float:inline-start;width:7em;margin-inline-start:-7.5em;color:#777;font-family:var(--font-display);text-transform:uppercase;font-size:.72rem;letter-spacing:.05em}.stk td.n{text-align:start}}
+
+.ag-footer{background:var(--ag-gray-dark);color:#ccc;padding:.9rem 1.75rem;font-size:.78rem;display:flex;flex-wrap:wrap;gap:.4rem 1.2rem;align-items:center}
+.ag-footer__name{font-family:var(--font-display);letter-spacing:.08em;text-transform:uppercase;color:#fff;font-size:.95rem}
+.ag-footer p{margin:0;flex:1 1 420px;color:#bbb}
+@media (max-width:640px){.ag-header__subtitle{display:none}.ag-header{padding:.5rem 1rem}main{padding:.6rem}.subnav{padding:0 .5rem}.caption .ms{display:none}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<div id="agSplash" class="splash" role="presentation">
+  <img src="data:image/png;base64,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" alt="AriesGate Tech" />
+  <div class="splash__bar"><i></i></div>
+  <div class="splash__tag">AriesGate Tech</div>
+</div>
+<div id="appSplash" class="splash" role="presentation" style="display:none">
+  <div class="wrap">
+    <h1>TOKENIZED DEPOSIT <span>FLOW</span></h1>
+    <p>APIM · orchestrator · AML / BSA / fraud · Hogan on z/OS · Oracle GL · settlement · Treasury Center</p>
+    <svg viewBox="0 0 560 60" aria-hidden="true">
+      <g fill="none" stroke="#444" stroke-width="2"><path id="sp" d="M20 30 H540"/></g>
+      <g font-family="Barlow Condensed" font-size="11" fill="#aaa" text-anchor="middle">
+        <circle cx="20" cy="30" r="6" fill="#666"/><text x="20" y="54">API</text>
+        <circle cx="150" cy="30" r="6" fill="#666"/><text x="150" y="54">SCREEN</text>
+        <circle cx="280" cy="30" r="6" fill="#666"/><text x="280" y="54">CORE</text>
+        <circle cx="410" cy="30" r="6" fill="#666"/><text x="410" y="54">GL</text>
+        <circle cx="540" cy="30" r="6" fill="#666"/><text x="540" y="54">TREASURY</text>
+      </g>
+      <circle r="8" fill="#E8520A"><animateMotion dur="1.6s" repeatCount="indefinite"><mpath href="#sp"/></animateMotion></circle>
+    </svg>
+  </div>
+</div>
+
+<header class="ag-header">
+  <img class="ag-header__logo" src="data:image/png;base64,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" alt="AriesGate Tech" />
+  <div class="ag-header__divider"></div>
+  <div>
+    <div class="ag-header__title">Tokenized Deposit Flow</div>
+    <div class="ag-header__subtitle">One token's path through every system, ending on the treasury desk</div>
+  </div>
+</header>
+<nav class="subnav" aria-label="Pages">
+  <a href="../">Core console</a>
+  <a href="#flow" class="on">TDN end-to-end flow</a>
+  <a href="#treasury">Treasury Center</a>
+</nav>
+
+<main>
+  <div class="grid" id="flow">
+    <section class="card">
+      <div class="bar">Network API request<span class="r" id="reqMeta">POST /tdn/v1/mints</span></div>
+      <div class="body">
+        <p class="blurb">You are <b>Participant A</b> on a tokenized deposit network. A client calls your <b>Azure APIM</b> gateway to <b>mint</b>, <b>burn</b> or <b>transfer</b> tdUSD. Watch the request travel through every system, then see the result land in the Treasury Center.</p>
+        <div class="fg"><span class="lab">Action</span>
+          <div class="seg" role="group" aria-label="Action" id="actSeg">
+            <button type="button" data-a="MINT" class="on">Mint</button><button type="button" data-a="BURN">Burn</button><button type="button" data-a="XFER">Transfer</button>
+          </div>
+          <span class="hint" id="actHint"></span>
+        </div>
+        <div class="fg"><label class="lab" for="cust">Customer (Participant A)</label><select class="inp" id="cust"></select></div>
+        <div class="fg hidden" id="gDest"><label class="lab" for="dest">Send to</label><select class="inp" id="dest"></select></div>
+        <div class="fg"><label class="lab" for="amt">Amount (USD = tdUSD)</label><input class="inp" id="amt" inputmode="decimal" value="5,000.00" autocomplete="off" /></div>
+        <div class="fg"><label class="lab" for="chan">Channel</label>
+          <select class="inp" id="chan"><option value="portal">Corporate treasury portal</option><option value="fintech">Fintech partner API</option></select></div>
+        <div class="fg"><label class="lab" for="scen">Scenario</label>
+          <select class="inp" id="scen">
+            <option value="clear">Clean: everything passes</option>
+            <option value="aml">AML alert: rapid in-and-out movement</option>
+            <option value="sanctions">Sanctions: potential list match</option>
+            <option value="fraud">Fraud: new device + velocity</option>
+            <option value="kyc">BSA: KYC refresh overdue</option>
+            <option value="gldelay">GL import delayed (recon break)</option>
+          </select></div>
+        <div class="btns">
+          <button class="btn btn--p" id="runBtn" type="button">▶ Send request</button>
+          <button class="btn btn--o" id="stepBtn" type="button">Step</button>
+        </div>
+        <div class="speedrow"><label for="speed">Speed</label>
+          <select class="inp" id="speed"><option value="1500">Slow</option><option value="850" selected>Normal</option><option value="350">Fast</option><option value="0">Instant</option></select>
+          <button class="btn btn--o btn--s" id="resetBtn" type="button" style="margin-left:auto">Reset data</button>
+        </div>
+        <div class="result" id="result" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="bar bar--dark">Live system diagram<span class="r" id="txId">no transaction yet</span></div>
+      <div class="swipe">Swipe sideways to see the whole diagram →</div>
+      <div class="diagwrap"><svg id="diag" viewBox="0 0 1200 500" role="img" aria-label="Animated diagram of the tokenized deposit transaction path"></svg></div>
+      <div class="caption" aria-live="polite"><span class="num" id="capNum">READY</span><span class="txt" id="capTxt">Pick an action and press Send request.</span><span class="ms" id="capMs"></span></div>
+      <div class="legend">
+        <span><i style="background:var(--ag-orange)"></i>request</span>
+        <span><i style="background:var(--teal)"></i>response / confirmation</span>
+        <span><i style="background:var(--warn)"></i>held for review</span>
+        <span><i style="background:var(--bad)"></i>rejected</span>
+        <span>Async after the client response: GL → settlement → recon → treasury</span>
+      </div>
+    </section>
+  </div>
+
+  <div class="lower">
+    <section class="card">
+      <div class="bar bar--dark">Transaction timeline<span class="r" id="tlMeta"></span></div>
+      <ol class="tl" id="tl"><li><span class="d"><small>Steps appear here as the request moves. Click a finished step to see its payload.</small></span></li></ol>
+    </section>
+    <section class="card">
+      <div class="codehead"><span id="codeTitle">Payload</span><span class="lang" id="codeLang">—</span><button class="copy" id="copyBtn" type="button">Copy</button></div>
+      <pre class="code" id="code">Each step's message, policy or program shows here.</pre>
+    </section>
+  </div>
+
+  <section id="treasury" aria-label="Treasury Center">
+    <div class="tc-head">
+      <div><h2>Treasury Center</h2><p>Participant A · tdUSD issuance, reserves, liquidity, GL and compliance</p></div>
+      <div class="r"><span class="bdg b-dark" id="tcClock">—</span></div>
+    </div>
+    <div class="tc">
+      <div class="kpis" id="kpis"></div>
+      <div class="tcgrid">
+        <div class="stack3">
+          <div class="panel"><h3>Reserve vs token supply<span class="r">tdUSD outstanding, BDA reserve, GL 210500</span></h3>
+            <div class="in"><div class="fig" id="figSupply"><svg id="svgSupply" aria-label="Supply, reserve and GL balance over time"></svg></div>
+            <div class="leg"><span><i style="background:var(--ag-orange)"></i>tdUSD on the network</span><span><i style="background:var(--ag-gray-dark)"></i>Hogan BDA reserve</span><span><i style="background:var(--teal)"></i>Oracle GL 210500</span></div></div></div>
+          <div class="panel"><h3>Settlement + reconciliation<span class="r" id="reconMeta"></span></h3>
+            <div class="in scroll"><table class="tbl stk" id="tblTx"></table></div></div>
+          <div class="panel"><h3>Oracle Fusion GL journals<span class="r">Source TDN · Category Tokenized Deposits</span></h3>
+            <div class="in" id="jes"></div></div>
+        </div>
+        <div class="stack3">
+          <div class="panel"><h3>Intraday liquidity<span class="r">central bank settlement account</span></h3>
+            <div class="in" id="liq"></div></div>
+          <div class="panel"><h3>Compliance queue<span class="r" id="caseMeta"></span></h3>
+            <div class="in" id="cases"></div></div>
+          <div class="panel"><h3>Reconciliation breaks</h3>
+            <div class="in" id="breaks"></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="ag-footer">
+  <div class="ag-footer__name">AriesGate Tech</div>
+  <p>Teaching simulation. Participants, customers, accounts, wallets, payloads and amounts are made up, and no real bank is represented. Hogan is a trademark of DXC Technology; Azure API Management, Oracle Fusion Cloud and z/OS Connect belong to their owners; this app is independent and connects to nothing.</p>
+</footer>
+
+<script>
+{
+/* ═════════ helpers ═════════ */
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const r2 = n => Math.round(n * 100) / 100;
+const fmt = n => (n < 0 ? '-' : '') + Math.abs(r2(n)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmt0 = n => (n < 0 ? '-' : '') + '$' + Math.abs(Math.round(n)).toLocaleString('en-US');
+const plain = n => r2(n).toFixed(2);
+const num = s => { const t = String(s == null ? '' : s).replace(/[$,\s]/g, ''); return /^\d*\.?\d+$/.test(t) ? parseFloat(t) : NaN; };
+const lp = (s, n, c = '0') => String(s).padStart(n, c);
+const hex = n => { const a = new Uint8Array(n); try { crypto.getRandomValues(a); } catch (e) { a.forEach((_, i) => a[i] = Math.random() * 256 | 0); } return Array.from(a, b => b.toString(16).padStart(2, '0')).join(''); };
+const now = () => new Date();
+const hms = d => lp(d.getHours(), 2) + ':' + lp(d.getMinutes(), 2) + ':' + lp(d.getSeconds(), 2);
+const ymd = (d, sep = '') => d.getFullYear() + sep + lp(d.getMonth() + 1, 2) + sep + lp(d.getDate(), 2);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ═════════ data ═════════ */
+const SEED = {
+  cust: {
+    'C-RIVERA': { name: 'Rivera Hardware LLC', dda: '1000200037', ddaBal: 48900, cda: '7000200037', tokens: 25000, wallet: '0x19B2c3D4e5F60718293a4B5c6D7e8F9012347E0A' },
+    'C-NORTH':  { name: 'Northstar Logistics Inc', dda: '1000200052', ddaBal: 250000, cda: '7000200052', tokens: 0, wallet: '0x5C0d71E2aB43f9C8d1E6b7A9F0c2D3e4F5a61B27' },
+    'C-DANA':   { name: 'Dana Whitfield', dda: '1000200011', ddaBal: 12450, cda: '7000200011', tokens: 1000, wallet: '0x7A3F9e01b2C4d5E6f7081a2B3c4D5e6F7a8bC41D' }
+  },
+  partB: { 'B-LAKE': { name: 'Lakeside Produce Co', wallet: '0x4E8a0B1c2D3e4F5061728394aBcDeF0123456789' }, 'B-SUMMIT': { name: 'Summit Analytics LLC', wallet: '0x9D1c2B3a4F5e6D7c8B9a0F1e2D3c4B5a6F7e8D90' } },
+  bda: 26000, gl: { '101100': 5000000, '210100': 311350, '210500': 26000, '230100': 0 },
+  cbOpen: 5000000, floor: 4000000, seq: 120, block: 18200450, journalSeq: 880,
+  txns: [], journals: [], cases: [], history: [{ l: 'Open', chain: 26000, bda: 26000, gl: 26000 }]
+};
+const KEY = 'agt-tdn-flow-v1';
+let S;
+try { const j = localStorage.getItem(KEY); S = j ? JSON.parse(j) : null; } catch (e) { S = null; }
+if (!S) S = JSON.parse(JSON.stringify(SEED));
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+const chainSupply = () => r2(Object.values(S.cust).reduce((t, c) => t + c.tokens, 0));
+const ACCT = { '101100': 'Cash – central bank settlement account', '210100': 'Customer DDA deposits', '210500': 'Tokenized deposit liability (BDA)', '230100': 'Due to network participants' };
+const cs = a => `101-4100-${a}-TDN-000`;
+
+/* ═════════ diagram layout ═════════ */
+const N = {
+  client:  { x: 20,  y: 40,  w: 165, h: 62, t: 'Client app', s: 'treasury portal / fintech' },
+  apim:    { x: 215, y: 40,  w: 155, h: 62, t: 'Azure APIM', s: 'gateway + policies' },
+  orch:    { x: 400, y: 40,  w: 190, h: 62, t: 'Payments orchestrator', s: 'route · screen · saga' },
+  aml:     { x: 640, y: 22,  w: 175, h: 46, t: 'AML', s: 'monitoring + sanctions' },
+  bsa:     { x: 640, y: 78,  w: 175, h: 46, t: 'BSA', s: 'CIP · Travel Rule · CTR' },
+  fraud:   { x: 640, y: 134, w: 175, h: 46, t: 'Fraud', s: 'real-time risk score' },
+  tdn:     { x: 870, y: 40,  w: 310, h: 62, t: 'Tokenized deposit network', s: 'MQ gateway → tdUSD contract' },
+  zcon:    { x: 400, y: 232, w: 190, h: 62, t: 'z/OS Connect', s: 'REST → CICS channel' },
+  cics:    { x: 640, y: 232, w: 175, h: 62, t: 'Hogan CICS', s: 'TDNXF300 · IDS' },
+  ledgers: { x: 870, y: 212, w: 310, h: 104, t: 'Hogan ledgers', s: '' },
+  gl:      { x: 960, y: 402, w: 220, h: 62, t: 'Oracle Fusion GL', s: 'FBDI journal import' },
+  settle:  { x: 690, y: 402, w: 220, h: 62, t: 'Settlement', s: 'book · on-ledger · Fedwire' },
+  recon:   { x: 420, y: 402, w: 220, h: 62, t: 'Reconciliation', s: 'chain · Hogan · GL' },
+  treas:   { x: 20,  y: 394, w: 345, h: 78, t: 'Treasury Center', s: 'reserve · liquidity · recon · cases' }
+};
+const E = {
+  'client-apim': ['client', 'r', 'apim', 'l'], 'apim-orch': ['apim', 'r', 'orch', 'l'],
+  'orch-aml': ['orch', 'r', 'aml', 'l'], 'orch-bsa': ['orch', 'r', 'bsa', 'l'], 'orch-fraud': ['orch', 'r', 'fraud', 'l'],
+  'orch-zcon': ['orch', 'b', 'zcon', 't'], 'zcon-cics': ['zcon', 'r', 'cics', 'l'], 'cics-ledgers': ['cics', 'r', 'ledgers', 'l'],
+  'ledgers-tdn': ['ledgers', 't', 'tdn', 'b'], 'ledgers-gl': ['ledgers', 'b', 'gl', 't'],
+  'gl-settle': ['gl', 'l', 'settle', 'r'], 'settle-recon': ['settle', 'l', 'recon', 'r'], 'recon-treas': ['recon', 'l', 'treas', 'r'],
+  'orch-treas': ['orch', 'b-', 'treas', 't+']
+};
+function pt(n, side) {
+  const a = N[n];
+  return { r: [a.x + a.w, a.y + a.h / 2], l: [a.x, a.y + a.h / 2], t: [a.x + a.w / 2, a.y], b: [a.x + a.w / 2, a.y + a.h], 'b-': [a.x + 26, a.y + a.h], 't+': [a.x + a.w - 70, a.y] }[side];
+}
+function pathD(e) {
+  const [a, sa, b, sb] = E[e], p = pt(a, sa), q = pt(b, sb);
+  const off = (s, k) => ({ r: [k, 0], l: [-k, 0], t: [0, -k], b: [0, k] })[s[0]];
+  const d = Math.max(28, Math.hypot(q[0] - p[0], q[1] - p[1]) * 0.42);
+  const c1 = off(sa, d), c2 = off(sb, d);
+  return `M${p[0]},${p[1]} C${p[0] + c1[0]},${p[1] + c1[1]} ${q[0] + c2[0]},${q[1] + c2[1]} ${q[0]},${q[1]}`;
+}
+const svgNS = 'http://www.w3.org/2000/svg';
+const sv = (tag, attrs = {}, parent) => { const e = document.createElementNS(svgNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+let edgeEls = {}, nodeEls = {}, chipEls = {}, pkLayer;
+function drawDiagram() {
+  const g = $('#diag'); g.innerHTML = '';
+  const bands = [[0, 192, 'API · orchestration · compliance · network'], [200, 130, 'Core banking on z/OS (Hogan)'], [338, 160, 'Finance, settlement + treasury']];
+  bands.forEach(([y, h, l]) => { const b = sv('g', { class: 'band' }, g); sv('rect', { x: 0, y, width: 1200, height: h, rx: 0 }, b); const t = sv('text', { x: 10, y: y + 14 }, b); t.textContent = l; });
+  const eg = sv('g', {}, g);
+  Object.keys(E).forEach(k => { edgeEls[k] = sv('path', { d: pathD(k), class: 'edge', id: 'e-' + k }, eg); });
+  Object.entries(N).forEach(([id, n]) => {
+    const ng = sv('g', { class: 'node', id: 'n-' + id }, g);
+    sv('rect', { class: 'box', x: n.x, y: n.y, width: n.w, height: n.h, rx: 9 }, ng);
+    const tt = sv('text', { class: 't', x: n.x + 12, y: n.y + (n.h < 50 ? 19 : 25) }, ng); tt.textContent = n.t;
+    if (n.s) { const st = sv('text', { class: 's', x: n.x + 12, y: n.y + (n.h < 50 ? 35 : 43) }, ng); st.textContent = n.s; }
+    const bd = sv('text', { class: 'badge', x: n.x + n.w - 10, y: n.y + (n.h < 50 ? 19 : n.h - 10), 'text-anchor': 'end' }, ng); bd.textContent = '';
+    nodeEls[id] = ng;
+  });
+  // ledger chips
+  const L = N.ledgers; const cw = 92;
+  [['DDA', 'dda'], ['BDA', 'bda'], ['CDA', 'cda']].forEach(([lab, k], i) => {
+    const cg = sv('g', { class: 'chip' }, nodeEls.ledgers);
+    const x = L.x + 10 + i * (cw + 8), y = L.y + 36;
+    sv('rect', { x, y, width: cw, height: 56, rx: 6 }, cg);
+    const a = sv('text', { class: 'cl', x: x + 8, y: y + 17 }, cg); a.textContent = lab;
+    const v = sv('text', { class: 'cv', x: x + 8, y: y + 40 }, cg); v.textContent = '—';
+    chipEls[k] = { g: cg, v };
+  });
+  pkLayer = sv('g', {}, g);
+}
+function setNode(id, cls, badge) {
+  const g = nodeEls[id]; if (!g) return;
+  g.classList.remove('active', 'done', 'hold', 'fail', 'dim'); if (cls) g.classList.add(cls);
+  if (badge !== undefined) { const b = g.querySelector('.badge'); b.textContent = badge; b.setAttribute('fill', cls === 'hold' ? '#C98A00' : cls === 'fail' ? '#D23C2B' : '#2E9E5B'); }
+}
+function resetDiagram() {
+  Object.keys(N).forEach(id => setNode(id, null, ''));
+  Object.values(edgeEls).forEach(e => e.setAttribute('class', 'edge'));
+  pkLayer.innerHTML = '';
+  setChips(null);
+}
+function setChips(c, bump) {
+  if (!c) { ['dda', 'bda', 'cda'].forEach(k => { chipEls[k].v.textContent = '—'; chipEls[k].g.classList.remove('bump'); }); return; }
+  ['dda', 'bda', 'cda'].forEach(k => {
+    if (c[k] == null) return;
+    chipEls[k].v.textContent = k === 'cda' ? fmt0(c[k]).replace('$', '') + ' td' : fmt0(c[k]);
+    chipEls[k].g.classList.toggle('bump', !!(bump && bump.includes(k)));
+  });
+}
+const COLORS = { req: '#E8520A', ret: '#1F8A8A', bad: '#D23C2B', hold: '#C98A00' };
+function travel(edge, rev, kind, label, dur) {
+  const path = edgeEls[edge];
+  path.setAttribute('class', 'edge ' + ({ req: 'lit', ret: 'litret', bad: 'litbad', hold: 'lithold' })[kind]);
+  if (!dur || reduced) return Promise.resolve();
+  const L = path.getTotalLength();
+  const g = sv('g', { class: 'pk' }, pkLayer);
+  sv('circle', { r: 8, fill: COLORS[kind] }, g);
+  const t = sv('text', { x: 12, y: -10, fill: COLORS[kind] }, g); t.textContent = label || '';
+  return new Promise(res => {
+    const t0 = performance.now();
+    const f = ts => {
+      let k = Math.min(1, (ts - t0) / dur); const e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+      const p = path.getPointAtLength(L * (rev ? 1 - e : e));
+      g.setAttribute('transform', `translate(${p.x},${p.y})`);
+      if (k < 1) requestAnimationFrame(f); else { g.remove(); res(); }
+    };
+    requestAnimationFrame(f);
+  });
+}
+
+/* ═════════ code highlighting ═════════ */
+const COB = 'EXEC|CICS|END-EXEC|MOVE|TO|FROM|INTO|IF|ELSE|END-IF|EVALUATE|WHEN|END-EVALUATE|PERFORM|COMPUTE|ADD|SUBTRACT|SET|TRUE|NOT|AND|OR|CALL|USING|GET|PUT|CONTAINER|CHANNEL|LINK|PROGRAM|READ|REWRITE|FILE|RIDFLD|UPDATE|SYNCPOINT|ROLLBACK|RETURN|ZERO|PIC|COMP-3';
+function hl(text, lang) {
+  return text.split('\n').map(line => {
+    let h = esc(line);
+    if (lang === 'COBOL') {
+      if (line.length > 6 && line[6] === '*') return `<span class="cm">${h}</span>`;
+      return h.replace(new RegExp(`('[^']*')|(\\*&gt;.*$)|(?<![\\w-])(${COB})(?![\\w-])|(?<![\\w-])(\\d[\\d.]*)(?![\\w])`, 'g'), (m, s, c, k, n) => s ? `<span class="s">${s}</span>` : c ? `<span class="cm">${c}</span>` : k ? `<span class="k">${k}</span>` : `<span class="nu">${n}</span>`);
+    }
+    if (lang === 'XML') {
+      if (/^\s*&lt;!--/.test(h)) return `<span class="cm">${h}</span>`;
+      return h.replace(/(&lt;\/?[\w:.-]+)|("[^"]*")|(\/?&gt;)|(\s[\w:-]+)(?==)/g, (m, t, s, e, a) => t ? `<span class="tg">${t}</span>` : s ? `<span class="s">${s}</span>` : e ? `<span class="tg">${e}</span>` : `<span class="at">${a}</span>`);
+    }
+    if (/^\s*(#|\/\/)/.test(line)) return `<span class="cm">${h}</span>`;
+    return h.replace(/("[^"]*")(\s*:)?|^(\s*[\w.-]+:)(?=\s)|\b(GET|POST|HTTP\/1\.1|Host|Authorization|Content-Type|NEW|true|false|null)\b|(\b\d[\d.,]*\b)/g, (m, s, colon, key, kw, n) => s ? (colon ? `<span class="at">${s}</span>${colon}` : `<span class="s">${s}</span>`) : key ? `<span class="at">${key}</span>` : kw ? `<span class="k">${kw}</span>` : `<span class="nu">${n}</span>`);
+  }).join('\n');
+}
+
+/* ═════════ transaction builder ═════════ */
+const ENDPOINT = { MINT: 'POST /tdn/v1/mints', BURN: 'POST /tdn/v1/redemptions', XFER: 'POST /tdn/v1/transfers' };
+const VERB = { MINT: 'Mint', BURN: 'Burn', XFER: 'Transfer' };
+
+function build(p, resume) {
+  const c = S.cust[p.cust], A = num(p.amount), amt = isNaN(A) ? 0 : r2(A);
+  const interbank = p.action === 'XFER' && p.dest.startsWith('B-');
+  const onus = p.action === 'XFER' && !interbank;
+  const dc = onus ? S.cust[p.dest] : null, db = interbank ? S.partB[p.dest] : null;
+  const txid = resume ? resume.txid : `TDN-${ymd(now()).slice(2)}-${lp(S.seq + 1, 6)}`;
+  const corr = hex(4) + '-' + hex(2) + '-' + hex(2) + '-' + hex(6);
+  const tx = '0x' + hex(32), txs = tx.slice(0, 12) + '…' + tx.slice(-6), block = S.block + 1;
+  const f = {};
+  f.badamt = isNaN(A) || A <= 0 || A > 10000000;
+  const sc = resume ? 'clear' : p.scenario;
+  f.hold = !f.badamt && ['aml', 'sanctions', 'fraud', 'kyc'].includes(sc);
+  f.nsf = !f.badamt && !f.hold && p.action === 'MINT' && amt > c.ddaBal;
+  f.lowtok = !f.badamt && !f.hold && p.action !== 'MINT' && amt > c.tokens;
+  f.reject = f.nsf || f.lowtok;
+  f.gldelay = p.scenario === 'gldelay';
+  f.ok = !f.badamt && !f.hold && !f.reject;
+  const travelRule = amt >= 3000;
+  const holdType = { aml: 'AML alert', sanctions: 'Sanctions', fraud: 'Fraud', kyc: 'BSA / KYC' }[sc];
+  const caseId = f.hold ? ({ aml: 'AML', sanctions: 'SAN', fraud: 'FRD', kyc: 'KYC' })[sc] + '-' + lp(24000 + S.seq + 1, 5) : null;
+  const toName = onus ? dc.name : interbank ? db.name + ' (Participant B)' : '';
+  const toWallet = onus ? dc.wallet : interbank ? db.wallet : '';
+  // post-state for chips
+  const bdaAfter = p.action === 'MINT' ? S.bda + amt : p.action === 'BURN' ? S.bda - amt : interbank ? S.bda - amt : S.bda;
+  const ddaAfter = p.action === 'MINT' ? c.ddaBal - amt : p.action === 'BURN' ? c.ddaBal + amt : c.ddaBal;
+  const cdaAfter = p.action === 'MINT' ? c.tokens + amt : c.tokens - amt;
+  const supplyAfter = p.action === 'MINT' ? chainSupply() + amt : p.action === 'BURN' || interbank ? chainSupply() - amt : chainSupply();
+  const glAfter = f.gldelay ? S.gl['210500'] : (p.action === 'MINT' ? S.gl['210500'] + amt : (p.action === 'BURN' || interbank) ? S.gl['210500'] - amt : S.gl['210500']);
+  const jeId = `TDN-JE-${lp(S.journalSeq + 1, 6)}`;
+  const today = ymd(now(), '/'), iso = new Date().toISOString().slice(0, 19);
+  const ctx = { p, c, amt, txid, corr, tx, txs, block, interbank, onus, toName };
+
+  // GL lines
+  let lines = [];
+  if (p.action === 'MINT') lines = [['210100', amt, 0, 'DDA to tokenized deposit'], ['210500', 0, amt, 'tdUSD issued to CDA ' + c.cda]];
+  if (p.action === 'BURN') lines = [['210500', amt, 0, 'tdUSD redeemed from CDA ' + c.cda], ['210100', 0, amt, 'Credit DDA ' + c.dda]];
+  if (interbank) lines = [['210500', amt, 0, 'tdUSD sent to Participant B'], ['230100', 0, amt, 'Due to Participant B'], ['230100', amt, 0, 'Fedwire settlement to Participant B'], ['101100', 0, amt, 'Central bank settlement account']];
+  ctx.lines = lines;
+
+  /* ---- payloads ---- */
+  const body = p.action === 'MINT' ? `{ "customerId": "${p.cust}",\n  "sourceAccount": "${c.dda}",\n  "custodyAccount": "${c.cda}",\n  "amount": { "value": "${plain(amt)}", "currency": "USD" },\n  "token": "tdUSD" }`
+    : p.action === 'BURN' ? `{ "customerId": "${p.cust}",\n  "custodyAccount": "${c.cda}",\n  "creditAccount": "${c.dda}",\n  "amount": { "value": "${plain(amt)}", "currency": "USD" },\n  "token": "tdUSD" }`
+    : `{ "customerId": "${p.cust}",\n  "fromCustody": "${c.cda}",\n  "to": { "participant": "${interbank ? 'PARTICIPANT-B' : 'PARTICIPANT-A'}",\n          "name": "${toName}", "wallet": "${toWallet.slice(0, 10)}…" },\n  "amount": { "value": "${plain(amt)}", "currency": "USD" },\n  "token": "tdUSD", "purpose": "SUPP" }`;
+  const req = `${ENDPOINT[p.action]} HTTP/1.1\nHost: api.tdn-demo.example\nAuthorization: Bearer eyJhbGciOiJSUzI1NiIs…  (scp tdn.${p.action === 'XFER' ? 'transfer' : p.action.toLowerCase()})\nOcp-Apim-Subscription-Key: ••••••••••••\nIdempotency-Key: ${txid}\nContent-Type: application/json\n\n${f.badamt ? body.replace(plain(amt), String(p.amount)) : body}`;
+  const policy = `<policies>
+  <inbound>
+    <base />
+    <!-- mutual TLS: only enrolled client certificates -->
+    <validate-client-certificate validate-revocation="true" validate-trust="true" />
+    <validate-jwt header-name="Authorization" failed-validation-httpcode="401">
+      <openid-config url="https://login.microsoftonline.com/{tenant-id}/v2.0/.well-known/openid-configuration" />
+      <required-claims><claim name="scp" match="any"><value>tdn.mint</value><value>tdn.burn</value><value>tdn.transfer</value></claim></required-claims>
+    </validate-jwt>
+    <rate-limit-by-key calls="60" renewal-period="60" counter-key="@(context.Subscription.Id)" />
+    <!-- request body must match the tdn-v1 JSON schema (amount > 0) -->
+    <validate-content unspecified-content-type-action="prevent" max-size="16384" size-exceeded-action="prevent" errors-variable-name="schemaErrors">
+      <content type="application/json" validate-as="json" action="prevent" />
+    </validate-content>
+    <set-header name="X-Correlation-Id" exists-action="skip"><value>@(context.RequestId.ToString())</value></set-header>
+    <set-backend-service backend-id="payments-orchestrator" />
+  </inbound>
+  <outbound><base /><set-header name="X-Powered-By" exists-action="delete" /></outbound>
+</policies>`;
+  const canon = `// orchestrator canonical event (saga ${txid})
+{ "eventType": "TOKEN_${p.action === 'XFER' ? (interbank ? 'TRANSFER_INTERBANK' : 'TRANSFER_ONUS') : p.action}",
+  "txnId": "${txid}", "correlationId": "${corr}",
+  "channel": "${p.channel === 'fintech' ? 'FINTECH_API' : 'TREASURY_PORTAL'}",
+  "customer": { "id": "${p.cust}", "name": "${c.name}", "dda": "${c.dda}", "cda": "${c.cda}" },
+  "amount": "${plain(amt)}", "currency": "USD", "token": "tdUSD",${interbank || onus ? `\n  "beneficiary": { "name": "${toName}", "participant": "${interbank ? 'B' : 'A'}" },` : ''}
+  "steps": ["SCREEN", "CORE_POST", "NETWORK", "RESPOND", "GL", "SETTLE", "RECON"] }`;
+  const amlRes = sc === 'aml' ? `{ "sanctions": "NO_MATCH", "alerts": [ { "rule": "TM-07", "desc": "rapid movement: >90% in and out within 24h" } ], "riskScore": 74, "decision": "ALERT" }`
+    : sc === 'sanctions' ? `{ "sanctions": "POTENTIAL_MATCH", "list": "consolidated sanctions list", "matchScore": 0.91, "decision": "HOLD" }`
+    : `{ "sanctions": "${resume ? 'CLEARED_BY_ANALYST' : 'NO_MATCH'}", "alerts": [], "riskScore": 12, "decision": "PASS" }`;
+  const bsaRes = `{ "cip": "${sc === 'kyc' ? 'REFRESH_REQUIRED' : 'VERIFIED'}", "travelRule": "${travelRule ? 'CAPTURED (>= $3,000 funds transfer)' : 'NOT_REQUIRED (< $3,000)'}",\n    "ctr": "NOT_APPLICABLE (no currency)", "decision": "${sc === 'kyc' ? 'HOLD' : 'PASS'}" }`;
+  const frdRes = sc === 'fraud' ? `{ "score": 86, "reasons": ["NEW_DEVICE", "VELOCITY_3X_30D"], "decision": "REVIEW" }` : `{ "score": 7, "reasons": [], "decision": "ALLOW" }`;
+  const screenReq = `// fan-out, in parallel, 800 ms budget each
+POST https://aml.internal/v2/screen        { "txnId": "${txid}", "party": "${c.name}"${toName ? `, "counterparty": "${toName}"` : ''}, "amount": "${plain(amt)}" }
+POST https://bsa.internal/v1/check         { "txnId": "${txid}", "customerId": "${p.cust}", "type": "FUNDS_TRANSFER", "amount": "${plain(amt)}" }
+POST https://fraud.internal/v1/score       { "txnId": "${txid}", "channel": "${p.channel}", "deviceId": "${p.scenario === 'fraud' ? 'dev-new-' + hex(3) : 'dev-known-7c1a'}", "amount": "${plain(amt)}" }`;
+  const screenRes = `// responses
+AML    ${amlRes}
+BSA    ${bsaRes}
+FRAUD  ${frdRes}
+
+# orchestrator decision
+decision: ${f.hold ? `HOLD -> case ${caseId} (${holdType}), respond 202 PENDING_REVIEW` : resume ? 'RELEASED by analyst -> continue saga at CORE_POST' : 'PASS -> continue to CORE_POST'}`;
+  const zcon = `# z/OS Connect API "hogan-tdn" v1  ->  CICS program TDNXF300 (channel TDNCHAN)
+POST https://zosconnect.core.internal:9443/hogan/tdn/v1/${p.action.toLowerCase()}
+  request JSON  ->  container TDN-REQ   (COPY TDNREQ)
+    action          ->  TDN-ACTION       PIC X(04)            '${p.action}'
+    customer.dda    ->  TDN-DDA-ACCT     PIC 9(10)            ${c.dda}
+    customer.cda    ->  TDN-CDA-ACCT     PIC 9(10)            ${c.cda}
+    amount.value    ->  TDN-AMT          PIC S9(13)V99 COMP-3 ${plain(amt)}
+    txnId           ->  TDN-REF          PIC X(20)            '${txid}'${interbank || onus ? `\n    to.wallet       ->  TDN-DST-WALLET   PIC X(42)            '${toWallet.slice(0, 12)}…'` : ''}
+  CICS: EXEC CICS LINK PROGRAM('TDNXF300') CHANNEL('TDNCHAN')
+  response container TDN-RSP  ->  JSON`;
+  const cob = {
+    MINT: `       2000-MINT.
+      *    Tokens are issued only against collected funds - no OD
+           IF DDA-LEDGER-BAL - DDA-HOLD-AMT < TDN-AMT
+              MOVE 'TDN2102E' TO TDN-RESULT              ${f.nsf ? '*> taken: NSF' : ''}
+              EXEC CICS SYNCPOINT ROLLBACK END-EXEC
+           ELSE
+              SUBTRACT TDN-AMT FROM DDA-LEDGER-BAL       *> DDA ${c.dda}
+              ADD      TDN-AMT TO   BDA-LEDGER-BAL       *> BDA reserve
+              MOVE     TDN-AMT TO   CDA-PENDING-AMT      *> CDA ${c.cda}
+              EXEC CICS REWRITE FILE('IDSDDAM') FROM(DDA-MASTER-REC) END-EXEC
+              PERFORM 4000-PUT-TDN-REQUEST               *> MQ TDN.MINT.REQUEST
+           END-IF.`,
+    BURN: `       2000-BURN.
+      *    Tokens leave first; cash is released after the burn
+           IF CDA-TOKEN-BAL < TDN-AMT
+              MOVE 'TDN2201E' TO TDN-RESULT              ${f.lowtok ? '*> taken: low tokens' : ''}
+              EXEC CICS SYNCPOINT ROLLBACK END-EXEC
+           ELSE
+              SUBTRACT TDN-AMT FROM CDA-TOKEN-BAL        *> CDA ${c.cda}
+              MOVE     TDN-AMT TO   CDA-PENDING-AMT
+              PERFORM 4000-PUT-TDN-REQUEST               *> MQ TDN.BURN.REQUEST
+      *       BDA debit + DDA credit post in 5000- after the burn
+           END-IF.`,
+    XFER: `       2000-TRANSFER.
+           IF CDA-TOKEN-BAL < TDN-AMT
+              MOVE 'TDN2201E' TO TDN-RESULT              ${f.lowtok ? '*> taken: low tokens' : ''}
+              EXEC CICS SYNCPOINT ROLLBACK END-EXEC
+           ELSE
+              SUBTRACT TDN-AMT FROM CDA-TOKEN-BAL        *> CDA ${c.cda}
+              MOVE     TDN-AMT TO   CDA-PENDING-AMT${interbank ? `
+      *       Leaving our books: reserve drops, due-to-B is raised
+              SUBTRACT TDN-AMT FROM BDA-LEDGER-BAL       *> BDA reserve
+              MOVE 'B' TO TDN-DEST-PARTICIPANT` : `
+              MOVE 'A' TO TDN-DEST-PARTICIPANT           *> on-us: BDA unchanged`}
+              PERFORM 4000-PUT-TDN-REQUEST               *> MQ TDN.XFER.REQUEST
+           END-IF.`
+  }[p.action];
+  const ledgerTxt = (p.action === 'MINT' ? `DDA ${c.dda}   ${fmt(c.ddaBal)}  ->  ${fmt(ddaAfter)}   (DR ${fmt(amt)})
+BDA 9000000001   ${fmt(S.bda)}  ->  ${fmt(bdaAfter)}   (CR ${fmt(amt)}  token reserve)
+CDA ${c.cda}   pending +${fmt(amt)} tdUSD (credited after network confirms)`
+    : p.action === 'BURN' ? `CDA ${c.cda}   ${fmt(c.tokens)}  ->  ${fmt(cdaAfter)} tdUSD   (tokens reserved for burn)
+BDA 9000000001   debit pending ${fmt(amt)}  (after burn confirms)
+DDA ${c.dda}   credit pending ${fmt(amt)}  (after burn confirms)`
+    : `CDA ${c.cda}   ${fmt(c.tokens)}  ->  ${fmt(cdaAfter)} tdUSD
+${interbank ? `BDA 9000000001   ${fmt(S.bda)}  ->  ${fmt(bdaAfter)}   (tdUSD leaves Participant A)\nDue to Participant B   +${fmt(amt)}  (settles over Fedwire)` : `CDA ${dc.cda}   ${fmt(dc.tokens)}  ->  ${fmt(dc.tokens + amt)} tdUSD (after network confirms)\nBDA 9000000001   unchanged ${fmt(S.bda)}  (on-us: same liability)`}`) + `\nUnit of work held open until the network replies (MQ correlation ${corr.slice(0, 8)})`;
+  const call = p.action === 'MINT' ? `mint(${c.wallet.slice(0, 10)}…, ${plain(amt)})` : p.action === 'BURN' ? `burn(${c.wallet.slice(0, 10)}…, ${plain(amt)})` : interbank ? `transferInterbank(${c.wallet.slice(0, 10)}…, PARTICIPANT-B, ${toWallet.slice(0, 10)}…, ${plain(amt)})` : `transfer(${c.wallet.slice(0, 10)}…, ${toWallet.slice(0, 10)}…, ${plain(amt)})`;
+  const net = `// MQPUT1 TDN.${p.action}.REQUEST  ->  network gateway  ->  tdUSD contract
+{ "ref": "${txid}", "op": "${p.action.toLowerCase()}", "amount": "${plain(amt)}",
+  "call": "${call}",
+  "signer": "Participant A issuer key (HSM, role ${p.action === 'XFER' ? 'TRANSFER_AGENT' : 'MINTER_BURNER'})" }${interbank ? `\n// network: burns Participant A tdUSD, Participant B issues its own to ${toName}\n// and records A owes B ${fmt(amt)} for the next settlement` : ''}`;
+  const receipt = `// receipt (MQGET reply, correlated)
+{ "status": "0x1", "blockNumber": ${block}, "txHash": "${txs}",
+  "finality": "instant (BFT)", "event": "${p.action === 'MINT' ? 'Minted' : p.action === 'BURN' ? 'Burned' : interbank ? 'InterbankTransfer' : 'Transfer'}" }
+// Hogan 5000-CONFIRM: ${p.action === 'MINT' ? `CDA ${c.cda} +${fmt(amt)} tdUSD` : p.action === 'BURN' ? `BDA -${fmt(amt)}, DDA ${c.dda} +${fmt(amt)}` : interbank ? `due-to-B confirmed ${fmt(amt)}` : `CDA ${dc.cda} +${fmt(amt)} tdUSD`}; EXEC CICS SYNCPOINT`;
+  const resp = f.hold ? `HTTP/1.1 202 Accepted\nX-Correlation-Id: ${corr}\n\n{ "txnId": "${txid}", "status": "PENDING_REVIEW", "caseId": "${caseId}" }`
+    : f.badamt ? `HTTP/1.1 400 Bad Request\n\n{ "statusCode": 400, "message": "Body of the request does not conform to the schema: amount must be > 0" }`
+    : f.reject ? `HTTP/1.1 422 Unprocessable Content\nX-Correlation-Id: ${corr}\n\n{ "txnId": "${txid}", "status": "REJECTED", "reason": "${f.nsf ? `TDN2102E collected funds ${fmt(c.ddaBal)} < ${fmt(amt)}` : `TDN2201E token balance ${fmt(c.tokens)} < ${fmt(amt)}`}" }`
+    : `HTTP/1.1 201 Created\nX-Correlation-Id: ${corr}\n\n{ "txnId": "${txid}", "status": "COMPLETED", "action": "${p.action}",\n  "amount": "${plain(amt)}", "token": "tdUSD", "txHash": "${txs}", "block": ${block} }`;
+  const fbdi = lines.length ? `# GlInterface.csv (FBDI) - journal source TDN, category Tokenized Deposits
+${lines.map(([a, dr, cr]) => `NEW,300000001234567,${today},TDN,Tokenized Deposits,USD,${today},A,101,4100,${a},TDN,000,${dr ? plain(dr) : ''},${cr ? plain(cr) : ''},${txid}`).join('\n')}
+
+POST /fscmRestApi/resources/11.13.18.05/erpintegrations
+{ "OperationName": "importBulkData",
+  "DocumentContent": "UEsDBBQAAAAI…  (GlInterface.zip, base64)",
+  "ContentType": "zip", "FileName": "${jeId}.zip",
+  "DocumentAccount": "fin$/generalLedger$/import$",
+  "JobName": "/oracle/apps/ess/financials/generalLedger/programs/common,JournalImportLauncher",
+  "ParameterList": "300000001234567,TDN,#NULL,N,N,N,N" }
+${f.gldelay ? '# -> ESS request queued; journal import has not run yet (recon will flag a timing break)' : '# -> ESS job succeeded; journal ' + jeId + ' posted'}`
+    : `# On-us transfer: both CDAs sit inside the same liability account (210500).
+# Customer subledger moves; general ledger balance is unchanged.
+# No journal is sent to Oracle Fusion GL for this transaction.`;
+  const settle = interbank ? `<!-- Net obligation to Participant B settles in central bank money -->
+<FICdtTrf>
+  <GrpHdr><MsgId>${txid}-S</MsgId><CreDtTm>${iso}</CreDtTm><NbOfTxs>1</NbOfTxs></GrpHdr>
+  <CdtTrfTxInf>
+    <PmtId><EndToEndId>${txid}</EndToEndId></PmtId>
+    <IntrBkSttlmAmt Ccy="USD">${plain(amt)}</IntrBkSttlmAmt>
+    <InstgAgt><FinInstnId><Nm>Participant A</Nm></FinInstnId></InstgAgt>
+    <InstdAgt><FinInstnId><Nm>Participant B</Nm></FinInstnId></InstdAgt>
+  </CdtTrfTxInf>
+</FICdtTrf>
+<!-- Fedwire Funds pacs.009 accepted: central bank account -${fmt(amt)} -->`
+    : `<!-- ${p.action === 'XFER' ? 'On-us transfer settles on the network ledger at block ' + block + '. Final, no external leg.' : 'Book transfer inside Participant A: DDA and BDA are both our liabilities. Settled when posted; no external leg.'} -->
+<Settlement txn="${txid}" method="${p.action === 'XFER' ? 'ON_LEDGER' : 'BOOK_TRANSFER'}" status="SETTLED" />`;
+  const reconTxt = `# three-way reconciliation, tdUSD issued by Participant A
+source                       balance
+network (tdUSD-A supply)     ${fmt(supplyAfter)}
+Hogan BDA 9000000001         ${fmt(bdaAfter)}
+Oracle GL 210500             ${fmt(glAfter)}
+
+result: ${Math.abs(supplyAfter - glAfter) < .005 && Math.abs(supplyAfter - bdaAfter) < .005 ? 'MATCHED - fully backed, books agree' : `BREAK ${fmt(supplyAfter - glAfter)} on GL 210500 (timing: journal ${jeId} not imported)`}`;
+  const treasTxt = `{ "txnId": "${txid}", "status": "${f.gldelay ? 'SETTLED_RECON_BREAK' : 'SETTLED'}",
+  "tdusdOutstanding": "${plain(supplyAfter)}", "bdaReserve": "${plain(bdaAfter)}",
+  "coverage": "${supplyAfter ? (bdaAfter / supplyAfter * 100).toFixed(1) : '100.0'}%",
+  "centralBankBalance": "${plain(S.gl['101100'] - (interbank ? amt : 0))}",
+  "openCases": ${S.cases.filter(x => x.status === 'Open').length}, "reconBreaks": ${S.txns.filter(t => t.recon && !t.recon.gl).length + (f.gldelay ? 1 : 0)} }`;
+  const caseTxt = `# orchestrator -> Treasury Center compliance queue
+case: ${caseId}
+type: ${holdType}
+txn:  ${txid}  (${VERB[p.action]} ${fmt(amt)} tdUSD, ${c.name})
+state: OPEN - saga paused before CORE_POST; nothing posted, no tokens moved
+next: analyst Release (resumes at z/OS Connect) or Reject (client notified)`;
+
+  /* ---- steps ---- */
+  const st = [];
+  const add = o => st.push(o);
+  if (!resume) {
+    add({ k: 'api', n: 'Client → APIM', d: `${ENDPOINT[p.action]} with OAuth token + mTLS cert`, edges: [['client-apim', 0, 'req', ENDPOINT[p.action].split(' ')[1]]], node: 'apim', code: req, lang: 'HTTP', ms: 18 });
+    if (f.badamt) {
+      add({ k: 'apim400', n: 'APIM rejects', d: 'validate-content: body fails the JSON schema', edges: [['client-apim', 1, 'bad', '400']], node: 'apim', state: { apim: ['fail', '400'], client: ['fail'] }, code: resp, lang: 'HTTP', ms: 3, fail: 1 });
+    } else {
+      add({ k: 'policy', n: 'APIM policies → orchestrator', d: 'mTLS, validate-jwt, rate limit, schema, correlation id', edges: [['apim-orch', 0, 'req', 'routed']], node: 'orch', state: { apim: ['done', '✓'] }, code: policy, lang: 'XML', ms: 9 });
+      add({ k: 'canon', n: 'Orchestrator starts the saga', d: `canonical event ${txid}, idempotency checked`, edges: [], node: 'orch', code: canon, lang: 'JSON', ms: 4 });
+      add({ k: 'screen', n: 'Fan-out to AML, BSA, fraud', d: 'three screening calls in parallel', edges: [['orch-aml', 0, 'req', 'screen'], ['orch-bsa', 0, 'req', 'check'], ['orch-fraud', 0, 'req', 'score']], par: 1, node: null, active: ['aml', 'bsa', 'fraud'], code: screenReq, lang: 'HTTP', ms: 142 });
+      const amlBad = sc === 'aml' || sc === 'sanctions', bsaBad = sc === 'kyc', frdBad = sc === 'fraud';
+      add({ k: 'decide', n: f.hold ? `Screening: ${holdType} → hold` : 'Screening passed', d: f.hold ? `case ${caseId} opened` : `Travel Rule ${travelRule ? 'captured' : 'not required'}, fraud score 7`, edges: [['orch-aml', 1, amlBad ? 'hold' : 'ret', amlBad ? 'HOLD' : 'pass'], ['orch-bsa', 1, bsaBad ? 'hold' : 'ret', bsaBad ? 'HOLD' : 'pass'], ['orch-fraud', 1, frdBad ? 'hold' : 'ret', frdBad ? 'REVIEW' : 'allow']], par: 1, node: 'orch', state: { aml: [amlBad ? 'hold' : 'done', amlBad ? 'HOLD' : 'PASS'], bsa: [bsaBad ? 'hold' : 'done', bsaBad ? 'HOLD' : 'PASS'], fraud: [frdBad ? 'hold' : 'done', frdBad ? 'REVIEW' : '7/100'] }, code: screenRes, lang: 'YAML', ms: 6, hold: f.hold });
+      if (f.hold) {
+        add({ k: 'case', n: 'Case to Treasury Center', d: `${caseId} in the compliance queue`, edges: [['orch-treas', 0, 'hold', caseId]], node: 'treas', state: { orch: ['hold', 'PAUSED'], treas: ['hold', 'CASE'] }, code: caseTxt, lang: 'YAML', ms: 25, hold: 1 });
+        add({ k: 'resp', n: 'Client gets 202 Pending review', d: 'no money or tokens moved', edges: [['apim-orch', 1, 'hold', '202'], ['client-apim', 1, 'hold', '202']], node: 'client', state: { client: ['hold', '202'] }, code: resp, lang: 'HTTP', ms: 11, hold: 1 });
+      }
+    }
+  } else {
+    add({ k: 'release', n: 'Analyst released the case', d: `${resume.caseId} cleared; saga resumes at CORE_POST`, edges: [['orch-treas', 1, 'ret', 'release']], node: 'orch', state: { treas: ['done', 'RELEASED'], client: ['done'], apim: ['done', '✓'], aml: ['done', 'CLEARED'], bsa: ['done', 'PASS'], fraud: ['done', 'PASS'] }, code: screenRes, lang: 'YAML', ms: 30 });
+  }
+  if (!f.badamt && !f.hold) {
+    add({ k: 'zcon', n: 'Orchestrator → z/OS Connect', d: 'REST call mapped to a CICS channel', edges: [['orch-zcon', 0, 'req', 'POST /hogan/tdn']], node: 'zcon', state: { orch: ['done', '✓'] }, code: zcon, lang: 'YAML', ms: 21 });
+    add({ k: 'cics', n: 'Hogan CICS TDNXF300', d: f.reject ? (f.nsf ? 'collected funds too low → rollback' : 'token balance too low → rollback') : `${VERB[p.action].toLowerCase()} posted to the Hogan ledgers`, edges: [['zcon-cics', 0, 'req', 'LINK']], node: 'cics', state: { zcon: ['done', '✓'] }, code: cob, lang: 'COBOL', ms: 14, fail: f.reject });
+    if (f.reject) {
+      add({ k: 'resp', n: 'Client gets 422 Rejected', d: 'unit of work rolled back; nothing posted', edges: [['zcon-cics', 1, 'bad', '422'], ['orch-zcon', 1, 'bad', '422'], ['apim-orch', 1, 'bad', '422'], ['client-apim', 1, 'bad', '422']], node: 'client', state: { cics: ['fail', 'ROLLBACK'], client: ['fail', '422'] }, code: resp, lang: 'HTTP', ms: 12, fail: 1 });
+    } else {
+      const chipsMid = p.action === 'MINT' ? { dda: ddaAfter, bda: bdaAfter, cda: c.tokens } : { dda: c.ddaBal, bda: interbank ? bdaAfter : S.bda, cda: cdaAfter };
+      add({ k: 'ledger', n: 'DDA · BDA · CDA movement', d: p.action === 'MINT' ? 'DDA debited, BDA reserve credited' : p.action === 'BURN' ? 'tokens reserved for burn' : interbank ? 'CDA debited, BDA reserve drops' : 'CDA debited (on-us)', edges: [['cics-ledgers', 0, 'req', 'post']], node: 'ledgers', state: { cics: ['done', '✓'] }, chips: chipsMid, bump: p.action === 'MINT' ? ['dda', 'bda'] : interbank ? ['cda', 'bda'] : ['cda'], code: ledgerTxt, lang: 'TEXT', ms: 6 });
+      add({ k: 'net', n: `Network ${VERB[p.action].toLowerCase()} over MQ`, d: call.split('(')[0] + '() on the tdUSD contract', edges: [['ledgers-tdn', 0, 'req', p.action.toLowerCase()]], node: 'tdn', code: net, lang: 'JSON', ms: 380 });
+      const chipsEnd = { dda: ddaAfter, bda: bdaAfter, cda: cdaAfter };
+      add({ k: 'confirm', n: 'Network confirms, Hogan commits', d: `block ${block}, tx ${tx.slice(0, 10)}…`, edges: [['ledgers-tdn', 1, 'ret', 'block ' + block]], node: 'ledgers', state: { tdn: ['done', 'BLOCK ' + String(block).slice(-4)] }, chips: chipsEnd, bump: p.action === 'MINT' ? ['cda'] : p.action === 'BURN' ? ['dda', 'bda'] : [], code: receipt, lang: 'JSON', ms: 40 });
+      add({ k: 'resp', n: 'Client gets 201 Completed', d: 'synchronous path done; finance steps continue async', edges: [['cics-ledgers', 1, 'ret', '201'], ['zcon-cics', 1, 'ret', '201'], ['orch-zcon', 1, 'ret', '201'], ['apim-orch', 1, 'ret', '201'], ['client-apim', 1, 'ret', '201']], node: 'client', state: { ledgers: ['done', '✓'], cics: ['done', '✓'], zcon: ['done', '✓'], orch: ['done', '✓'], apim: ['done', '✓'], client: ['done', '201'] }, code: resp, lang: 'HTTP', ms: 15, fast: 1 });
+      add({ k: 'gl', n: onus ? 'GL: no journal (on-us)' : f.gldelay ? 'Oracle GL import queued' : 'Journal to Oracle Fusion GL', d: onus ? 'subledger only; 210500 unchanged' : f.gldelay ? `${jeId} waiting on the import job` : `${jeId} · ${lines.length} lines`, edges: [['ledgers-gl', 0, f.gldelay ? 'hold' : 'req', onus ? 'n/a' : 'FBDI']], node: 'gl', state: { gl: [f.gldelay ? 'hold' : 'done', onus ? 'N/A' : f.gldelay ? 'QUEUED' : 'POSTED'] }, code: fbdi, lang: 'CSV', ms: 2400 });
+      add({ k: 'settle', n: interbank ? 'Fedwire settlement to Participant B' : 'Settlement', d: interbank ? 'pacs.009 from the central bank account' : p.action === 'XFER' ? 'final on the network ledger' : 'book transfer, settled at posting', edges: [['gl-settle', 0, 'req', interbank ? 'pacs.009' : 'book']], node: 'settle', state: { settle: ['done', 'SETTLED'] }, code: settle, lang: 'XML', ms: interbank ? 1900 : 5 });
+      add({ k: 'recon', n: 'Three-way reconciliation', d: f.gldelay ? 'break on GL 210500 (timing)' : 'network = Hogan BDA = GL', edges: [['settle-recon', 0, 'req', 'recon']], node: 'recon', state: { recon: [f.gldelay ? 'hold' : 'done', f.gldelay ? 'BREAK' : 'MATCHED'] }, code: reconTxt, lang: 'TEXT', ms: 60, hold: f.gldelay });
+      add({ k: 'treas', n: 'Treasury Center updated', d: 'reserve, liquidity, GL and recon refreshed', edges: [['recon-treas', 0, 'req', 'update']], node: 'treas', state: { treas: ['done', 'UPDATED'] }, code: treasTxt, lang: 'JSON', ms: 8 });
+    }
+  }
+
+  /* ---- outcome + apply ---- */
+  const res = f.badamt ? { kind: 'bad', title: 'Stopped at APIM', msg: '400 · amount fails the API schema; the request never reached the orchestrator' }
+    : f.hold ? { kind: 'warn', title: `Held: ${holdType}`, msg: `202 · case ${caseId} is in the Treasury Center compliance queue. Release it there to resume.` }
+    : f.reject ? { kind: 'bad', title: 'Rejected by Hogan', msg: `422 · ${f.nsf ? `collected funds ${fmt(c.ddaBal)} are below ${fmt(amt)} (no overdraft for tokens)` : `token balance ${fmt(c.tokens)} is below ${fmt(amt)}`}` }
+    : { kind: f.gldelay ? 'warn' : 'ok', title: f.gldelay ? `${VERB[p.action]} settled, recon break` : `${VERB[p.action]} completed and settled`, msg: `201 · ${fmt(amt)} tdUSD · block ${block}${f.gldelay ? ` · GL journal ${jeId} not imported yet; post it from the Treasury Center` : ''}` };
+  function apply() {
+    const ts = hms(now());
+    if (!resume) S.seq += 1;
+    const touched = [txid];
+    if (f.badamt) { S.txns.unshift({ id: txid, ts, action: p.action, cust: c.name, amount: amt, to: toName, status: 'REJECTED', where: 'APIM 400', settle: '—', recon: null }); return touched; }
+    if (f.hold) {
+      S.cases.unshift({ id: caseId, txid, type: holdType, ts, status: 'Open', reason: { aml: 'TM-07 rapid in-and-out movement', sanctions: 'Potential match on consolidated list (0.91)', fraud: 'New device + 3x velocity (score 86)', kyc: 'CIP refresh overdue' }[sc], params: Object.assign({}, p, { scenario: p.scenario }) });
+      S.txns.unshift({ id: txid, ts, action: p.action, cust: c.name, amount: amt, to: toName, status: 'PENDING_REVIEW', where: caseId, settle: '—', recon: null });
+      return touched;
+    }
+    const existing = S.txns.find(t => t.id === txid);
+    const row = existing || { id: txid, ts, action: p.action, cust: c.name, amount: amt, to: toName };
+    if (!existing) S.txns.unshift(row);
+    if (f.reject) { Object.assign(row, { status: 'REJECTED', where: f.nsf ? 'Hogan NSF' : 'Hogan low tokens', settle: '—', recon: null }); return touched; }
+    // ledgers
+    if (p.action === 'MINT') { c.ddaBal = r2(c.ddaBal - amt); c.tokens = r2(c.tokens + amt); S.bda = r2(S.bda + amt); }
+    if (p.action === 'BURN') { c.ddaBal = r2(c.ddaBal + amt); c.tokens = r2(c.tokens - amt); S.bda = r2(S.bda - amt); }
+    if (onus) { c.tokens = r2(c.tokens - amt); dc.tokens = r2(dc.tokens + amt); }
+    if (interbank) { c.tokens = r2(c.tokens - amt); S.bda = r2(S.bda - amt); }
+    S.block = block;
+    // GL
+    let je = null;
+    if (lines.length) {
+      S.journalSeq += 1;
+      je = { id: jeId, txid, ts, amount: amt, desc: `${VERB[p.action]} ${fmt(amt)} tdUSD · ${c.name}${toName ? ' → ' + toName : ''}`, lines: lines.map(([a, dr, cr, d]) => ({ a, dr, cr, d })), status: f.gldelay ? 'Pending import' : 'Posted' };
+      S.journals.unshift(je);
+      if (!f.gldelay) postJE(je);
+    }
+    // interbank settlement hits cash (GL posts with the journal; the cash itself moves now)
+    Object.assign(row, { status: f.gldelay ? 'SETTLED · RECON BREAK' : 'SETTLED', where: `block ${block}`, settle: interbank ? 'Fedwire pacs.009' : p.action === 'XFER' ? 'On-ledger' : 'Book transfer', recon: { chain: true, hogan: true, gl: !f.gldelay }, je: je ? je.id : null, tx: txs });
+    snapshot(`${VERB[p.action]} ${fmt0(amt)}`);
+    return touched;
+  }
+  return { ctx, steps: st, res, apply, f, caseId, txid };
+}
+function postJE(je) {
+  je.lines.forEach(l => {
+    const debitNormal = l.a === '101100';
+    const delta = (l.dr || 0) - (l.cr || 0);
+    S.gl[l.a] = r2(S.gl[l.a] + (debitNormal ? delta : -delta));
+  });
+  je.status = 'Posted';
+}
+function snapshot(l) { S.history.push({ l, chain: chainSupply(), bda: S.bda, gl: S.gl['210500'] }); if (S.history.length > 40) S.history.splice(1, 1); }
+
+/* ═════════ runner ═════════ */
+let running = false, stepMode = false, stepResolve = null, current = null, executed = [];
+const params = () => ({ action: curAction, cust: $('#cust').value, dest: $('#dest').value, amount: $('#amt').value, channel: $('#chan').value, scenario: $('#scen').value });
+const gate = first => (stepMode && !first) ? new Promise(r => { stepResolve = r; $('#stepBtn').disabled = false; $('#runBtn').disabled = false; $('#runBtn').textContent = '▶ Play the rest'; }) : Promise.resolve();
+const speed = () => +$('#speed').value;
+
+async function run(p, resume) {
+  if (running) return;
+  running = true; executed = [];
+  const T = build(p, resume); current = T;
+  resetDiagram();
+  setChips({ dda: T.ctx.c.ddaBal, bda: S.bda, cda: T.ctx.c.tokens });
+  $('#txId').textContent = `${T.txid} · ${VERB[p.action]} ${fmt(T.ctx.amt)} tdUSD`;
+  $('#result').className = 'result'; $('#result').innerHTML = '';
+  renderTimeline(T, -1);
+  $('#runBtn').disabled = true; $('#stepBtn').disabled = !stepMode;
+  if (resume) { ['client', 'apim'].forEach(n => setNode(n, 'done')); }
+  for (let i = 0; i < T.steps.length; i++) {
+    const s = T.steps[i];
+    await gate(i === 0); $('#stepBtn').disabled = true; $('#runBtn').disabled = true;
+    $('#capNum').textContent = `STEP ${i + 1} / ${T.steps.length}`; $('#capTxt').textContent = `${s.n}: ${s.d}`; $('#capMs').textContent = `~${s.ms} ms`;
+    renderTimeline(T, i); showCode(s, i);
+    (s.active || []).forEach(n => setNode(n, 'active'));
+    if (s.node) setNode(s.node, s.fail ? 'fail' : s.hold ? 'hold' : 'active');
+    const sp = speed(), dur = s.fast ? sp * 0.45 : sp;
+    if (s.par) await Promise.all(s.edges.map(([e, rev, kind, lab]) => travel(e, rev, kind, lab, dur)));
+    else for (const [e, rev, kind, lab] of s.edges) await travel(e, rev, kind, lab, dur);
+    if (s.state) Object.entries(s.state).forEach(([n, [cls, b]]) => setNode(n, cls, b));
+    if (s.chips) setChips(s.chips, s.bump);
+    executed.push(i);
+    if (sp && !stepMode) await sleep(Math.min(260, sp * 0.3));
+  }
+  renderTimeline(T, T.steps.length);
+  const touched = T.apply(); save();
+  const r = T.res, el = $('#result');
+  el.className = 'result show ' + r.kind;
+  el.innerHTML = `<b>${r.kind === 'ok' ? '✔ ' : r.kind === 'warn' ? '⚠ ' : '✖ '}${esc(r.title)}</b><br><code>${esc(r.msg)}</code> <a href="#treasury">See Treasury Center ↓</a>`;
+  $('#capNum').textContent = 'DONE'; $('#capTxt').textContent = r.title; $('#capMs').textContent = `${T.steps.reduce((t, s) => t + s.ms, 0).toLocaleString()} ms total`;
+  renderTreasury(touched);
+  running = false; stepMode = false; stepResolve = null;
+  $('#runBtn').disabled = false; $('#stepBtn').disabled = false; $('#runBtn').textContent = '▶ Send request';
+}
+function renderTimeline(T, cur) {
+  $('#tlMeta').textContent = `${T.txid} · ${T.steps.length} steps`;
+  $('#tl').innerHTML = T.steps.map((s, i) => {
+    const state = i < cur ? (s.fail ? 'fail' : s.hold ? 'hold' : 'done') : i === cur ? 'cur' : '';
+    const lab = i < cur ? (s.fail ? 'failed' : s.hold ? 'held' : 'done') : i === cur ? 'now' : 'next';
+    return `<li class="${state}${state && state !== 'cur' ? ' done' : ''}" data-i="${i}"><span class="n">${i + 1}</span><span class="d">${esc(s.n)}<small>${esc(s.d)}</small></span><span class="st">${lab}</span></li>`;
+  }).join('');
+  const curEl = $('#tl').querySelector('li.cur'); if (curEl) { const box = $('#tl'); box.scrollTop = curEl.offsetTop - box.clientHeight / 2; }
+}
+function showCode(s, i) {
+  $('#codeTitle').textContent = `Step ${i + 1} · ${s.n}`;
+  $('#codeLang').textContent = s.lang;
+  $('#code').innerHTML = hl(s.code, s.lang);
+  $('#code').scrollTop = 0;
+  document.querySelectorAll('#tl li').forEach(li => li.classList.toggle('sel', +li.dataset.i === i));
+}
+$('#tl').addEventListener('click', e => { const li = e.target.closest('li.done'); if (!li || !current) return; const i = +li.dataset.i; showCode(current.steps[i], i); });
+$('#copyBtn').onclick = async () => { try { await navigator.clipboard.writeText($('#code').textContent); $('#copyBtn').textContent = 'Copied'; setTimeout(() => $('#copyBtn').textContent = 'Copy', 1200); } catch (e) { $('#copyBtn').textContent = 'Select + copy'; } };
+
+/* ═════════ form ═════════ */
+let curAction = 'MINT';
+const HINT = { MINT: 'DDA → BDA reserve, tdUSD issued to the customer\'s CDA', BURN: 'tdUSD burned from the CDA, BDA → DDA', XFER: 'CDA → another customer here (on-us) or at Participant B (interbank)' };
+function fillForm() {
+  const keep = $('#cust').value;
+  $('#cust').innerHTML = Object.entries(S.cust).map(([k, c]) => `<option value="${k}">${esc(c.name)} · DDA ${fmt0(c.ddaBal)} · ${fmt0(c.tokens).slice(1)} tdUSD</option>`).join('');
+  if (keep && S.cust[keep]) $('#cust').value = keep;
+  const cu = $('#cust').value, dk = $('#dest').value;
+  $('#dest').innerHTML = '<optgroup label="Participant A (on-us)">' + Object.entries(S.cust).filter(([k]) => k !== cu).map(([k, c]) => `<option value="${k}">${esc(c.name)} · CDA ${c.cda}</option>`).join('') + '</optgroup><optgroup label="Participant B (interbank)">' + Object.entries(S.partB).map(([k, b]) => `<option value="${k}">${esc(b.name)} · Participant B</option>`).join('') + '</optgroup>';
+  if (dk && [...$('#dest').options].some(o => o.value === dk)) $('#dest').value = dk;
+  $('#gDest').classList.toggle('hidden', curAction !== 'XFER');
+  $('#actHint').textContent = HINT[curAction];
+  $('#reqMeta').textContent = ENDPOINT[curAction];
+}
+$('#actSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b || running) return; curAction = b.dataset.a; document.querySelectorAll('#actSeg button').forEach(x => x.classList.toggle('on', x === b)); fillForm(); });
+$('#cust').onchange = fillForm;
+$('#runBtn').onclick = () => { if (running) { if (stepMode && stepResolve) { stepMode = false; const r = stepResolve; stepResolve = null; r(); } return; } stepMode = false; run(params()); };
+$('#stepBtn').onclick = () => { if (!running) { stepMode = true; run(params()); return; } if (stepResolve) { const r = stepResolve; stepResolve = null; r(); } };
+$('#amt').addEventListener('keydown', e => { if (e.key === 'Enter') $('#runBtn').click(); });
+$('#resetBtn').onclick = () => { if (running) return; S = JSON.parse(JSON.stringify(SEED)); save(); fillForm(); resetDiagram(); renderTreasury([]); $('#result').className = 'result'; $('#tl').innerHTML = ''; $('#code').textContent = 'Each step\'s message, policy or program shows here.'; $('#txId').textContent = 'no transaction yet'; };
+
+/* ═════════ treasury ═════════ */
+function kpi(l, v, sub, cls) { return `<div class="kpi ${cls || ''}"><div class="l">${l}</div><div class="v">${v}</div><div class="sub">${sub}</div></div>`; }
+function renderTreasury(touched = []) {
+  const T = new Set(touched);
+  const sup = chainSupply(), bda = S.bda, gl = S.gl['210500'], cb = S.gl['101100'];
+  const backed = Math.abs(sup - bda) < .005, booksAgree = Math.abs(sup - gl) < .005;
+  const open = S.cases.filter(c => c.status === 'Open').length;
+  const breaks = S.txns.filter(t => t.recon && !t.recon.gl).length;
+  const outflow = S.cbOpen - cb;
+  $('#tcClock').textContent = `As of ${hms(now())}`;
+  $('#kpis').innerHTML = [
+    kpi('tdUSD outstanding', fmt0(sup), `${Object.values(S.cust).filter(c => c.tokens > 0).length} custody accounts`, 'acc'),
+    kpi('BDA reserve', fmt0(bda), backed ? 'fully backed · 100.0%' : 'coverage ' + (bda / sup * 100).toFixed(1) + '%', backed ? 'ok' : 'bad'),
+    kpi('GL 210500', fmt0(gl), booksAgree ? 'agrees with the network' : 'off by ' + fmt0(sup - gl), booksAgree ? 'ok' : 'warn'),
+    kpi('Central bank balance', fmt0(cb), outflow > 0 ? `${fmt0(outflow)} sent today` : 'no outflows today', cb < S.floor ? 'bad' : 'ok'),
+    kpi('Open compliance cases', String(open), open ? 'saga paused, nothing posted' : 'queue clear', open ? 'warn' : 'ok'),
+    kpi('Recon breaks', String(breaks), breaks ? 'GL timing differences' : 'three-way matched', breaks ? 'warn' : 'ok')
+  ].join('');
+  drawSupply();
+  // liquidity
+  const pct = Math.max(0, Math.min(100, cb / S.cbOpen * 100)), fl = S.floor / S.cbOpen * 100;
+  $('#liq').innerHTML = `<div class="lrow"><span>Opening balance</span><span>${fmt(S.cbOpen)}</span></div>
+    <div class="lrow"><span>Fedwire outflows to Participant B</span><span>${fmt(-outflow)}</span></div>
+    <div class="lrow"><span><b>Current balance</b></span><span><b>${fmt(cb)}</b></span></div>
+    <div class="meter" title="balance vs opening; red line is the internal floor"><i style="width:${pct}%;background:${cb < S.floor ? 'var(--bad)' : cb < S.floor * 1.05 ? 'var(--warn)' : 'var(--ok)'}"></i><b style="left:${fl}%"></b></div>
+    <div class="lrow"><span>Internal floor</span><span>${fmt(S.floor)}</span></div>
+    <div class="lrow"><span>Headroom above floor</span><span>${fmt(cb - S.floor)}</span></div>
+    <div class="lrow"><span>Net due to participants (unsettled)</span><span>${fmt(S.gl['230100'])}</span></div>`;
+  // tx table
+  $('#reconMeta').textContent = `${S.txns.length} transactions`;
+  const tk = v => v == null ? '<span class="tick">—</span>' : `<span class="tick ${v ? 'y' : 'x'}">${v ? '✓' : '✗'}</span>`;
+  const sb = s => s.startsWith('SETTLED ·') ? 'b-warn' : s === 'SETTLED' ? 'b-ok' : s === 'PENDING_REVIEW' ? 'b-warn' : 'b-bad';
+  $('#tblTx').innerHTML = S.txns.length ? `<thead><tr><th>Txn</th><th>Action</th><th class="n">Amount</th><th>Status</th><th>Settlement</th><th>Chain</th><th>Hogan</th><th>GL</th></tr></thead><tbody>${S.txns.slice(0, 14).map(t => `<tr class="${T.has(t.id) ? 'flash' : ''}"><td data-l="Txn" class="m">${t.id}<br><small style="color:#888">${t.ts}</small></td><td data-l="Action">${VERB[t.action]}<br><small style="color:#888">${esc(t.cust)}${t.to ? ' → ' + esc(t.to) : ''}</small></td><td data-l="Amount" class="n">${fmt(t.amount)}</td><td data-l="Status"><span class="bdg ${sb(t.status)}">${t.status.replace(/_/g, ' ')}</span><br><small style="color:#888">${esc(t.where)}</small></td><td data-l="Settlement">${esc(t.settle)}</td><td data-l="Chain">${tk(t.recon && t.recon.chain)}</td><td data-l="Hogan">${tk(t.recon && t.recon.hogan)}</td><td data-l="GL">${tk(t.recon && t.recon.gl)}</td></tr>`).join('')}</tbody>` : '<tbody><tr><td class="empty">No transactions yet. Send a request above.</td></tr></tbody>';
+  // journals
+  $('#jes').innerHTML = S.journals.length ? S.journals.slice(0, 8).map((j, i) => `<details class="je"${i === 0 ? ' open' : ''}><summary><span class="m">${j.id}</span><span class="bdg ${j.status === 'Posted' ? 'b-ok' : 'b-warn'}">${j.status}</span><span>${esc(j.desc)}</span><span class="amt">${fmt(j.amount != null ? j.amount : j.lines[0].dr)}</span></summary><div class="scroll"><table class="tbl"><thead><tr><th>Account string</th><th>Description</th><th class="n">Debit</th><th class="n">Credit</th></tr></thead><tbody>${j.lines.map(l => `<tr><td class="m">${cs(l.a)}<br><small style="color:#888;font-family:var(--font-body)">${ACCT[l.a]}</small></td><td>${esc(l.d)}</td><td class="n">${l.dr ? fmt(l.dr) : ''}</td><td class="n">${l.cr ? fmt(l.cr) : ''}</td></tr>`).join('')}</tbody></table></div></details>`).join('') : '<div class="empty">Journals appear after a mint, burn or interbank transfer. On-us transfers stay in the subledger.</div>';
+  // cases
+  $('#caseMeta').textContent = `${open} open`;
+  $('#cases').innerHTML = S.cases.length ? S.cases.slice(0, 8).map(c => `<div class="case"><span class="bdg ${c.status === 'Open' ? 'b-warn' : c.status === 'Released' ? 'b-ok' : 'b-gray'}">${c.status}</span><div class="w"><b>${c.id}</b> · ${esc(c.type)}<small>${esc(c.reason)} · ${c.txid} · ${VERB[c.params.action]} ${fmt(num(c.params.amount))}</small></div>${c.status === 'Open' ? `<button class="btn btn--p btn--s" data-rel="${c.id}" type="button">Release</button><button class="btn btn--o btn--s" data-rej="${c.id}" type="button">Reject</button>` : ''}</div>`).join('') : '<div class="empty">No AML, BSA or fraud holds. Try a scenario like "AML alert".</div>';
+  // breaks
+  const br = S.txns.filter(t => t.recon && !t.recon.gl);
+  $('#breaks').innerHTML = br.length ? br.map(t => `<div class="case"><span class="bdg b-warn">Timing</span><div class="w"><b>${t.id}</b> · GL 210500 short by ${fmt(t.amount)}<small>Journal ${t.je} is waiting on the Oracle journal import job</small></div><button class="btn btn--p btn--s" data-post="${t.je}" type="button">Run journal import</button></div>`).join('') : `<div class="empty">No breaks. Network supply ${fmt(sup)} = Hogan BDA ${fmt(bda)} = GL 210500 ${fmt(gl)}.</div>`;
+}
+function drawSupply() {
+  const s = $('#svgSupply'), W = s.clientWidth || 600, H = s.clientHeight || 230, h = S.history;
+  const pad = { l: 64, r: 12, t: 12, b: 26 };
+  const vals = h.flatMap(x => [x.chain, x.bda, x.gl]);
+  let lo = Math.min(...vals), hi = Math.max(...vals); if (hi - lo < 1000) { hi += 500; lo = Math.max(0, lo - 500); }
+  const X = i => pad.l + (h.length < 2 ? (W - pad.l - pad.r) / 2 : i * (W - pad.l - pad.r) / (h.length - 1));
+  const Y = v => pad.t + (1 - (v - lo) / (hi - lo)) * (H - pad.t - pad.b);
+  const line = (k, col, w, dash) => `<polyline fill="none" stroke="${col}" stroke-width="${w}" ${dash ? 'stroke-dasharray="5 4"' : ''} points="${h.map((x, i) => X(i) + ',' + Y(x[k])).join(' ')}"/>`;
+  let g = '';
+  for (let i = 0; i <= 3; i++) { const v = lo + (hi - lo) * i / 3, y = Y(v); g += `<line x1="${pad.l}" x2="${W - pad.r}" y1="${y}" y2="${y}" stroke="#eee"/><text x="${pad.l - 6}" y="${y + 4}" text-anchor="end" font-size="11" fill="#888" font-family="IBM Plex Mono">${(v / 1000).toFixed(v >= 100000 ? 0 : 1)}k</text>`; }
+  const step = Math.max(1, Math.ceil(h.length / (W < 520 ? 3 : 6)));
+  h.forEach((x, i) => { if (i % step === 0 || i === h.length - 1) g += `<text x="${X(i)}" y="${H - 6}" text-anchor="${i === 0 && h.length > 1 ? 'start' : i === h.length - 1 && h.length > 1 ? 'end' : 'middle'}" font-size="10.5" fill="#888" font-family="Barlow">${esc(x.l)}</text>`; });
+  g += line('gl', '#1F8A8A', 2.5, 1) + line('bda', '#404040', 5) + line('chain', '#E8520A', 2.2);
+  const last = h[h.length - 1]; g += `<circle cx="${X(h.length - 1)}" cy="${Y(last.chain)}" r="4" fill="#E8520A"/>`;
+  s.setAttribute('viewBox', `0 0 ${W} ${H}`); s.innerHTML = g;
+}
+const roSupply = new ResizeObserver(() => drawSupply()); roSupply.observe($('#figSupply'));
+document.querySelector('#treasury').addEventListener('click', e => {
+  const rel = e.target.closest('[data-rel]'), rej = e.target.closest('[data-rej]'), post = e.target.closest('[data-post]');
+  if (running) return;
+  if (rel) {
+    const c = S.cases.find(x => x.id === rel.dataset.rel); if (!c) return;
+    c.status = 'Released'; save(); renderTreasury();
+    document.querySelector('#flow').scrollIntoView({ behavior: reduced ? 'auto' : 'smooth' });
+    run(c.params, { txid: c.txid, caseId: c.id });
+  }
+  if (rej) {
+    const c = S.cases.find(x => x.id === rej.dataset.rej); if (!c) return;
+    c.status = 'Rejected'; const t = S.txns.find(x => x.id === c.txid); if (t) Object.assign(t, { status: 'REJECTED', where: 'analyst rejected ' + c.id });
+    save(); renderTreasury([c.txid]);
+  }
+  if (post) {
+    const j = S.journals.find(x => x.id === post.dataset.post); if (!j || j.status === 'Posted') return;
+    postJE(j); S.txns.forEach(t => { if (t.je === j.id && t.recon) { t.recon.gl = true; t.status = 'SETTLED'; } });
+    snapshot('GL import'); save(); renderTreasury([j.txid]);
+  }
+});
+
+/* ═════════ boot ═════════ */
+drawDiagram(); fillForm(); renderTreasury();
+setInterval(() => { $('#tcClock').textContent = `As of ${hms(now())}`; }, 1000);
+const qs = new URLSearchParams(location.search);
+const ag = $('#agSplash'), app = $('#appSplash');
+function hideAll() { ag.classList.add('hide'); app.classList.add('hide'); setTimeout(() => { ag.remove(); app.remove(); }, 500); }
+if (qs.has('nosplash')) { ag.remove(); app.remove(); }
+else {
+  let t2; const toApp = () => { ag.classList.add('hide'); app.style.display = 'flex'; t2 = setTimeout(hideAll, 1900); };
+  const t1 = setTimeout(toApp, 1700);
+  ag.onclick = () => { clearTimeout(t1); toApp(); }; app.onclick = () => { clearTimeout(t2); hideAll(); };
+}
+window.__tdn = { get S() { return S; }, run: (p, r) => run(Object.assign(params(), p), r), get running() { return running; }, setAction(a) { curAction = a; document.querySelectorAll('#actSeg button').forEach(x => x.classList.toggle('on', x.dataset.a === a)); fillForm(); }, renderTreasury };
+}
+</script>
+</body>
+</html>

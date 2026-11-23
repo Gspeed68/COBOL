@@ -56,6 +56,7 @@ button,input,select,textarea{font:inherit}
 .ag-header__right{margin-left:auto;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
 .pill{font-family:var(--font-display);font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;border:1px solid #6a6a6a;border-radius:20px;padding:.2rem .7rem;color:#ddd}
 .pill b{color:var(--ag-orange)}
+a.pill{text-decoration:none}a.pill:hover{border-color:var(--ag-orange);color:#fff}
 
 /* ── Tabs ── */
 .tabs{display:flex;gap:2px;background:var(--ag-dark);padding:0 var(--space-lg);overflow-x:auto;scrollbar-width:none}
@@ -213,11 +214,11 @@ button,input,select,textarea{font:inherit}
   <div class="term">
     <h1>HOGAN <span>CORE</span> CONSOLE</h1>
     <div class="sub">COBOL · CICS · TOKENIZED DEPOSITS · APIM</div>
-<pre>DFHSI1517 AGDEMO  Control is being given to CICS.
+<pre>DFHSI1517 CICSDEMO Control is being given to CICS.
 IDS0001I  INTEGRATED DEPOSIT SYSTEM ONLINE   REGION AGDCICS1
 CIF0001I  CUSTOMER INFORMATION FILE OPEN
 TDN0001I  TOKENIZED DEPOSIT GATEWAY CONNECTED
-APIM      GATEWAY READY  api.agdemobank.example
+APIM      GATEWAY READY  api.tdn-demo.example
 <span class="blink">█</span></pre>
   </div>
 </div>
@@ -230,7 +231,8 @@ APIM      GATEWAY READY  api.agdemobank.example
     <div class="ag-header__subtitle">Type the request on the left · watch the COBOL that runs on the right</div>
   </div>
   <div class="ag-header__right">
-    <span class="pill">Bank <b>AriesGate Demo Bank</b></span>
+    <a class="pill navlink" href="tdn-flow/">TDN end-to-end flow <b>→</b></a>
+    <span class="pill">Core <b>Demo participant</b></span>
     <span class="pill">Region <b>AGDCICS1</b></span>
     <span class="pill" id="clock">—</span>
   </div>
@@ -298,7 +300,7 @@ APIM      GATEWAY READY  api.agdemobank.example
 
 <footer class="ag-footer">
   <div class="ag-footer__name">AriesGate Tech</div>
-  <p>Teaching simulation. Hogan is a trademark of DXC Technology; this app is independent and not affiliated with DXC. Program names, transaction codes, record layouts, partners, people and the bank are made up for illustration. Nothing here connects to a real core, network or rail.</p>
+  <p>Teaching simulation. Hogan is a trademark of DXC Technology; this app is independent and not affiliated with DXC. Program names, transaction codes, record layouts, partners, people and institutions are made up for illustration; no real bank is represented. Nothing here connects to a real core, network or rail.</p>
 </footer>
 
 <script>
@@ -425,7 +427,7 @@ SC.push({
   screen(v, c) {
     const a = S.dda[v.acct];
     return [
-      `<span class="h"> IDM1              AGDEMO BANK · IDS DDA MAINTENANCE        ${c.date} ${hms(now())}</span>`,
+      `<span class="h"> IDM1              DEMO CORE · IDS DDA MAINTENANCE          ${c.date} ${hms(now())}</span>`,
       '',
       ` ACCOUNT ....: <span class="u">${v.acct}</span>   ${esc(pad(a.name.toUpperCase(), 30))}  CIF ${a.cif}`,
       ` STATUS .....: ${a.status} (${pad(STAT[a.status].toUpperCase(), 7)})   PRODUCT: ${a.type.toUpperCase()}`,
@@ -605,7 +607,7 @@ SC.push({
   screen(v, c) {
     const a = S.dda[v.from], b = S.dda[v.to];
     return [
-      `<span class="h"> IXF1              AGDEMO BANK · IDS FUNDS TRANSFER          ${c.date} ${hms(now())}</span>`,
+      `<span class="h"> IXF1              DEMO CORE · IDS FUNDS TRANSFER            ${c.date} ${hms(now())}</span>`,
       '',
       ` FROM DDA ...: <span class="u">${v.from}</span>   ${esc(pad(a.name.toUpperCase(), 24))} STATUS ${a.status}`,
       `               LEDGER ${lpad(fmt(a.ledger), 13)}  AVAIL ${lpad(fmt(avail(a)), 13)}  OD ${lpad(fmt(a.od), 9)}`,
@@ -726,12 +728,12 @@ SC.push({
 //* Hard-post today's online journal to the DDA master,
 //* then cut the statement extract. Seq {{seq}}-{{seq2}} rides here.
 //STEP010  EXEC PGM=IDSB1000,PARM='POSTDATE={{date}}'
-//STEPLIB  DD DSN=AGD.HOGAN.IDS.LOADLIB,DISP=SHR
-//JRNLIN   DD DSN=AGD.IDS.ONLINE.JOURNAL,DISP=SHR
-//DDAMAST  DD DSN=AGD.IDS.DDA.MASTER,DISP=SHR
+//STEPLIB  DD DSN=DEMO.HOGAN.IDS.LOADLIB,DISP=SHR
+//JRNLIN   DD DSN=DEMO.IDS.ONLINE.JOURNAL,DISP=SHR
+//DDAMAST  DD DSN=DEMO.IDS.DDA.MASTER,DISP=SHR
 //EXCEPT   DD SYSOUT=*
 //STEP020  EXEC PGM=IDSB2000,COND=(4,LT)
-//STMTOUT  DD DSN=AGD.IDS.STMT.EXTRACT(+1),
+//STMTOUT  DD DSN=DEMO.IDS.STMT.EXTRACT(+1),
 //            DISP=(NEW,CATLG,DELETE),UNIT=SYSDA,
 //            SPACE=(CYL,(50,10),RLSE)
 //SYSOUT   DD SYSOUT=*`, { decl: true, unless: 'err', declLog: 'JES2  IDSNITE QUEUED FOR 23:30 - SEQ {{seq}}-{{seq2}} WILL HARD-POST' })
@@ -791,7 +793,7 @@ SC.push({
     };
   },
   screen(v, c) {
-    const lines = [`<span class="h"> ITK1              AGDEMO BANK · TOKENIZED DEPOSIT NETWORK  ${c.date || ymd(now())} ${hms(now())}</span>`, ''];
+    const lines = [`<span class="h"> ITK1              DEMO CORE · TOKENIZED DEPOSIT NETWORK    ${c.date || ymd(now())} ${hms(now())}</span>`, ''];
     lines.push(` ACTION .....: <span class="u">${v.action}</span>    (MINT  BURN  XFER)`);
     if (v.action === 'MINT') {
       const d = S.dda[v.acct];
@@ -980,7 +982,7 @@ SC.push({
 const PARTNERS = { northwind: { name: 'Northwind Payroll', sub: 'sub-northwind-prod', app: 'payroll-disburse' }, bluefin: { name: 'Bluefin Wallet', sub: 'sub-bluefin-prod', app: 'p2p-cashout' }, harbor: { name: 'Harbor Treasury', sub: 'sub-harbor-prod', app: 'b2b-treasury' } };
 const RAILS = { RTP: { name: 'RTP network', cap: 25000, instant: 1 }, FEDNOW: { name: 'FedNow Service', cap: 25000, instant: 1 }, ACH: { name: 'ACH (next window)', cap: 100000 }, WIRE: { name: 'Fedwire Funds', cap: 1000000 } };
 function nachaEntry(name, amt, trace) {
-  return '6' + '22' + '04400002' + '6' + pad('00009876546621', 17) + lpad(Math.round(amt * 100), 10, '0') + pad('AGD' + trace, 15) + pad(name.toUpperCase(), 22) + '  ' + '0' + '09999999' + lpad(trace, 7, '0');
+  return '6' + '22' + '09999999' + '9' + pad('00009876546621', 17) + lpad(Math.round(amt * 100), 10, '0') + pad('AGD' + trace, 15) + pad(name.toUpperCase(), 22) + '  ' + '0' + '09999999' + lpad(trace, 7, '0');
 }
 SC.push({
   id: 'apim', tab: 'Orchestrator + APIM', tran: 'API', prog: 'PAYPOST1',
@@ -1054,7 +1056,7 @@ SC.push({
 # {{partner}} · app {{app}}
 POST /payments/v1/credit-transfers HTTP/1.1                         ⟦if=op_PAY⟧
 GET /accounts/{{dda}}/balances HTTP/1.1                             ⟦if=op_BAL; log=APIM  {{partnerid}} REQUEST RECEIVED⟧
-Host: api.agdemobank.example
+Host: api.tdn-demo.example
 Authorization: Bearer eyJhbGciOiJSUzI1NiIs…{{tokstate}}
 Ocp-Apim-Subscription-Key: ••••••••••••
 Idempotency-Key: {{idem}}                                           ⟦if=op_PAY⟧
